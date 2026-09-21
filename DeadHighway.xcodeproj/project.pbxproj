@@ -9,17 +9,21 @@
 /* Begin PBXBuildFile section */
 		01F6CB481B457917D571E5FF /* DeadHighwayApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26E797E9A5D8B471D2958137 /* DeadHighwayApp.swift */; };
 		0C2CBF00417C4D05741CC0CB /* DHPresentation in Frameworks */ = {isa = PBXBuildFile; productRef = 91DAE125B1A8CB187312C7A9 /* DHPresentation */; };
+		29BE6C15C5576DA6451E5F51 /* DeadHighwaySession+Actions.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF53BE01D08E7BFC678DF4D0 /* DeadHighwaySession+Actions.swift */; };
 		4814AE7F2A90E55DD1B47894 /* GameRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98C7D67E4D4764BCA677B400 /* GameRootView.swift */; };
 		4F5F80CBEFA2BDA23798BD9B /* DHVehicle in Frameworks */ = {isa = PBXBuildFile; productRef = A4F063DDBD02BC4920410DF5 /* DHVehicle */; };
 		AF8874880591D327B7A62822 /* DHWorld in Frameworks */ = {isa = PBXBuildFile; productRef = 9F42BDDDD2178475E4927199 /* DHWorld */; };
 		D9477109AD82775E3A93541A /* DHGameplay in Frameworks */ = {isa = PBXBuildFile; productRef = 1004A425E5670A9DAE28D38D /* DHGameplay */; };
+		F1BC45B75F9320B8969DBB53 /* DeadHighwaySession+Save.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E1FD9BA08B97B7BCB6BB04B /* DeadHighwaySession+Save.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		26E797E9A5D8B471D2958137 /* DeadHighwayApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeadHighwayApp.swift; sourceTree = "<group>"; };
 		59A5B12A5BBDF657C826E7A8 /* KINGMAKER */ = {isa = PBXFileReference; lastKnownFileType = folder; name = KINGMAKER; path = .; sourceTree = SOURCE_ROOT; };
+		5E1FD9BA08B97B7BCB6BB04B /* DeadHighwaySession+Save.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DeadHighwaySession+Save.swift"; sourceTree = "<group>"; };
 		76EF1D94EB6F99A94A602CAD /* DeadHighway.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = DeadHighway.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		98C7D67E4D4764BCA677B400 /* GameRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameRootView.swift; sourceTree = "<group>"; };
+		BF53BE01D08E7BFC678DF4D0 /* DeadHighwaySession+Actions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DeadHighwaySession+Actions.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -41,6 +45,8 @@
 			isa = PBXGroup;
 			children = (
 				26E797E9A5D8B471D2958137 /* DeadHighwayApp.swift */,
+				BF53BE01D08E7BFC678DF4D0 /* DeadHighwaySession+Actions.swift */,
+				5E1FD9BA08B97B7BCB6BB04B /* DeadHighwaySession+Save.swift */,
 				98C7D67E4D4764BCA677B400 /* GameRootView.swift */,
 			);
 			name = DeadHighwayApp;
@@ -136,6 +142,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				01F6CB481B457917D571E5FF /* DeadHighwayApp.swift in Sources */,
+				29BE6C15C5576DA6451E5F51 /* DeadHighwaySession+Actions.swift in Sources */,
+				F1BC45B75F9320B8969DBB53 /* DeadHighwaySession+Save.swift in Sources */,
 				4814AE7F2A90E55DD1B47894 /* GameRootView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
