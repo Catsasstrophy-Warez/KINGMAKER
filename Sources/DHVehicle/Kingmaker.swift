@@ -5,6 +5,7 @@ public enum KingmakerSystem: String, Codable, CaseIterable, Sendable { case engi
 public struct VehicleComponent: Identifiable, Codable, Sendable, Equatable { public let id: EntityID; public var name: String; public var system: KingmakerSystem; public var condition: ComponentCondition; public var wear: Double }
 public struct KingmakerState: Codable, Sendable, Equatable { public let id: EntityID; public var name = "XR-13 Kingmaker"; public var components:[VehicleComponent]; public var fuelLiters:Double; public var batterySOC:Double; public var fuelPressureKPa:Double=0; public var oilPressureKPa:Double=0; public var coolantC:Double=20; public var engineRunning:Bool
  public func hasViable(_ system:KingmakerSystem)->Bool { components.contains{$0.system==system && ![.missing,.seized,.failed].contains($0.condition)} }
+ public var visualStates: [KingmakerComponentVisualState] { components.map { KingmakerComponentVisualState(componentID: $0.id.uuidString, condition: $0.condition) } }
  public var canCrank:Bool { batterySOC > 0.15 && hasViable(.engine) && hasViable(.electrical) }
  public var canStart:Bool { canCrank && fuelLiters > 0.5 && fuelPressureKPa > 150 && hasViable(.fuel) && hasViable(.ignition) && hasViable(.lubrication) && hasViable(.cooling) }
  public mutating func crank(seconds:Double)->Bool { guard canCrank else{return false}; batterySOC=max(0,batterySOC-0.012*seconds); if canStart { engineRunning=true; oilPressureKPa=300; return true }; return false }

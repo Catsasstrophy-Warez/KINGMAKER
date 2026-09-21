@@ -122,6 +122,27 @@ import Testing
     #expect(DHBlackridgeCounty.verticalSlice.roads.allSatisfy { $0.traversable })
 }
 
+@Test func rev10NavigationGraphRoutesGarageToParadise() {
+    let graph = DHBlackridgeNavigationGraph()
+    #expect(graph.route(from: "garage", to: "paradise") == ["garage", "farm", "truckStop", "paradise"])
+}
+
+@Test func rev10VehicleEncounterRuntimeIsPlayable() {
+    var encounter = DHVehicleEncounterRuntime()
+    encounter.tick(); encounter.tick(); encounter.tick()
+    #expect(encounter.encounter.presentation == .attacking)
+    encounter.fire(rounds: 5, damage: 25)
+    #expect(encounter.resolved)
+    #expect(encounter.encounter.radioEventID == "radio.north-road.consequence")
+}
+
+@Test func kingmakerVisualStateMapsAuthoritativeCondition() {
+    let component = KingmakerState.derelict().components[0]
+    let visual = KingmakerComponentVisualState(componentID: component.id.uuidString, condition: component.condition)
+    #expect(visual.profile.state == .broken)
+    #expect(visual.profile.repairable == false)
+}
+
 @Test func rev10CoordinatorCoversInspectionRepairStreamingAndRadio() {
     var runtime = DHRev10SliceCoordinator()
     runtime.inspect(.engineBay)

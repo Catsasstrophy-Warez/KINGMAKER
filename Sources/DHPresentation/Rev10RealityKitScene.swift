@@ -113,6 +113,11 @@ public final class DHRev10RealityKitScene {
         anchors["kingmaker"] = entity
         root.addChild(entity)
     }
+    public func syncKingmaker(position: DHVector3, headingRadians: Double) {
+        guard let entity = anchors["kingmaker"] else { return }
+        entity.position = [Float(position.x), Float(position.y), Float(position.z)]
+        entity.orientation = simd_quatf(angle: Float(headingRadians), axis: [0, 1, 0])
+    }
     public func setInterior(_ chunkID: String, visible: Bool) { anchors[chunkID]?.isEnabled = visible }
     public func attach(_ entity: Entity, stableID: String) { anchors[stableID] = entity; root.addChild(entity) }
 

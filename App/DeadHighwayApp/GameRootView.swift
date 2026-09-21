@@ -7,18 +7,24 @@ import DHVehicle
 
 struct GameRootView: View {
     @Bindable var session: DeadHighwaySession
+    @State private var scene = DHRev10RealityKitScene()
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
             RealityView { content in
-                let builder = DHRev10RealityKitScene()
                 let kingmaker = KingmakerState.derelict()
-                builder.build(county: .verticalSlice, hierarchy: .production(componentIDs: kingmaker.components.map { $0.id.uuidString }), kingmakerSpec: .init(path: .wastelandEndurance))
+                scene.build(county: .verticalSlice, hierarchy: .production(componentIDs: kingmaker.components.map { $0.id.uuidString }), kingmakerSpec: .init(path: .wastelandEndurance))
                 if let url = DHRev10AssetResolver.url(for: DHRev10AssetManifest.bindings.first(where: { $0.id == "kingmaker.mesh" })!),
                    let asset = try? Entity.load(contentsOf: url) {
-                    builder.replaceKingmaker(with: asset)
+                    scene.replaceKingmaker(with: asset)
                 }
-                content.add(builder.root)
+                content.add(scene.root)
+            } update: { _ in
+                if session.inVehicle {
+                    scene.syncKingmaker(position: session.drive.position, headingRadians: session.drive.headingRadians)
+                } else {
+                    scene.syncKingmaker(position: session.avatar.position, headingRadians: session.avatar.headingRadians)
+                }
             }
             .ignoresSafeArea()
             VStack { HUDView(session:session); Spacer(); TouchControls(session:session) }.padding()

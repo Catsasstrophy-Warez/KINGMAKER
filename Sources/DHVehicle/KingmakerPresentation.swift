@@ -17,3 +17,12 @@ public struct KingmakerVisualHierarchy: Codable, Equatable, Sendable {
         return Self(totalSimulationComponents: componentIDs.count, nodes: nodes)
     }
 }
+
+public struct KingmakerComponentVisualState: Codable, Equatable, Sendable {
+    public let componentID: String
+    public let profile: KingmakerConditionVisualProfile
+    public init(componentID: String, condition: ComponentCondition) {
+        self.componentID = componentID
+        profile = KingmakerConditionVisualProfile.from(condition)
+    }
+}
