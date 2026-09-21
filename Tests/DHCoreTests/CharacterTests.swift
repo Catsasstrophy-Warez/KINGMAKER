@@ -41,7 +41,7 @@ import Foundation
 
 @Test func packMuleIncreasesCarryCapacity() {
     let character = CharacterState(name: "Driver")
-    var withoutPerk = CharacterProgression()
+    let withoutPerk = CharacterProgression()
     var withPerk = CharacterProgression()
     withPerk.addPerk(.packMule)
     #expect(CharacterSystems.carryCapacity(character, progression: withPerk) > CharacterSystems.carryCapacity(character, progression: withoutPerk))
