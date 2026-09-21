@@ -15,6 +15,6 @@ let package = Package(
  .target(name:"DHEconomy",dependencies:["DHCore","DHWorld","DHSettlement","DHFleet"]),
  .target(name:"DHRadio",dependencies:["DHCore","DHWorld"]),
  .target(name:"DHGameplay",dependencies:["DHCore","DHVehicle","DHWorld","DHCharacter","DHFleet","DHCombat","DHNPC","DHSettlement","DHEconomy","DHRadio"]),
- .target(name:"DHPresentation",dependencies:["DHCore","DHVehicle","DHWorld","DHCharacter","DHFleet","DHNPC","DHSettlement","DHRadio"],resources:[.copy("Resources/Kingmaker_XR13.usdz")]),
+ .target(name:"DHPresentation",dependencies:["DHCore","DHVehicle","DHWorld","DHCharacter","DHNPC","DHRadio"],resources:[.copy("Resources/Kingmaker_XR13.usdz")]),
  .testTarget(name:"DHCoreTests",dependencies:["DHCore","DHVehicle","DHWorld","DHCharacter","DHFleet","DHCombat","DHNPC","DHSettlement","DHEconomy","DHRadio","DHGameplay","DHPresentation"])
  ])

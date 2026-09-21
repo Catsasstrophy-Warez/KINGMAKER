@@ -22,7 +22,7 @@ vehicle archetypes, the Blackridge authored-location manifest (roads, chunks,
 interiors, encounters), the Kingmaker simulation/render hierarchy, a bundled
 procedural textured USDZ blockout, and the gameplay/persistence contracts for
 the acceptance path above. The app now resolves the bundled Kingmaker asset
-with diagnostic marker fallback. The package currently has 102 passing Swift
+with diagnostic marker fallback. The package currently has 104 passing Swift
 tests covering the core systems, vertical slice, asset contract, navigation,
 encounter runtime, and save compatibility.
 
