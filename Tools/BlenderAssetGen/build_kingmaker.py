@@ -297,52 +297,81 @@ def green_ring(half_w, base_z, roof_z):
         (half_w, base_z),
     ]
 
-green_sections_smooth = catmull_rom_resample(green_sections, factor=4)
-greenhouse = loft("greenhouse", green_sections_smooth, body_panels, MAT_GLASSHOUSE, ring_fn=green_ring, smooth=True)
+# NOT Catmull-Rom-resampled, unlike the body shell: the greenhouse's sharp windshield-to-roof
+# rise (0.60 -> 1.00 over one segment) makes a Catmull-Rom spline overshoot well past the 1.00
+# roof control point -- measured at z=1.557 in the exported mesh, ~0.56 above the intended flat
+# roof, which floated the roof-mounted armor/cargo rack (positioned for the intended height) in
+# open air above the actual roof. Linear sections avoid the overshoot; smooth shading alone still
+# softens the faceting.
+greenhouse = loft("greenhouse", green_sections, body_panels, MAT_GLASSHOUSE, ring_fn=green_ring, smooth=True)
 
-# hood vents (reference shows low hood vents/scoop, not one tall bulge)
+# hood vents (reference shows low hood vents/scoop, not one tall bulge).
+# Bug: this is parented to body_panels, which already translates by (0,0,GROUND) -- using
+# "GROUND + 0.475" as this object's own (local) z on top of that double-added GROUND, putting it
+# at world z = 2*GROUND + 0.475 (1.475 with GROUND=0.50) versus the hood's actual surface at
+# world z~0.961. That's what was floating disconnected above the car in renders. This location is
+# already local to body_panels, so it only needs the local offset (measured against the actual
+# hood surface, not a second GROUND term).
 for side in (-1, 1):
     box(f"hoodVent_{'L' if side < 0 else 'R'}", (0.28, 0.14, 0.045), body_panels, MAT_DARK,
-        loc=(1.55, side * 0.28, GROUND + 0.475))
+        loc=(1.55, side * 0.28, 0.46))
 
-# front splitter (low aero lip ahead of the bumper) and push bar
+# front splitter (low aero lip ahead of the bumper) and push bar.
+# The previous span (2.55 -> 2.95) reached the pinched nose tip (body half-width there is only
+# 0.03-0.14) at a fixed 0.68 half-width, so most of the splitter stuck out past the actual body
+# surface -- visible in a top-down render as a rectangle poking off the side of the car. Pulled
+# back to sit under the wide bumper region instead (body half-width ~0.62-0.90 across this span)
+# and narrowed so it stays inside that footprint.
 wedge("frontSplitter",
-      [(-0.68, 0.0), (-0.68, 0.03), (0.68, 0.03), (0.68, 0.0)],
-      2.55, 2.95, chassis_root, MAT_DARK, mat_pos=(0, 0, GROUND + 0.06))
+      [(-0.55, 0.0), (-0.55, 0.03), (0.55, 0.03), (0.55, 0.0)],
+      2.30, 2.60, chassis_root, MAT_DARK, mat_pos=(0, 0, GROUND + 0.06))
 cyl("pushBar", 0.03, 1.2, chassis_root, MAT_METAL, loc=(2.70, 0, GROUND + 0.24), rot=(math.radians(90), 0, 0), smooth=True)
 for side in (-1, 1):
     cyl(f"pushBarUpright_{'L' if side < 0 else 'R'}", 0.025, 0.20, chassis_root, MAT_METAL,
         loc=(2.70, side * 0.58, GROUND + 0.14))
 
-# deep front grille opening (reference: a large dark lower opening, not a flat painted panel)
-box("grilleOpening", (0.10, 0.62, 0.20), chassis_root, MAT_DARK, loc=(2.66, 0, GROUND + 0.30))
+# deep front grille opening (reference: a large dark lower opening, not a flat painted panel).
+# Measured against the actual body-shell mesh: at x=2.66 the nose has already tapered too
+# narrow/curved to hold a flat box without it poking through the surface (this was the cause of
+# the grille/slats appearing to float disconnected in front of the nose); x=2.50 is still forward
+# fascia but wide and flat enough (body half-width ~0.79, top z ~0.87 there) to sit the opening
+# and its slats inside the surface instead of through it.
+box("grilleOpening", (0.10, 0.60, 0.18), chassis_root, MAT_DARK, loc=(2.50, 0, GROUND + 0.20))
 
 # rear diffuser fins + dual exhaust tips
-for i, y in enumerate((-0.55, -0.2, 0.2, 0.55)):
-    box(f"diffuserFin_{i}", (0.5, 0.03, 0.10), chassis_root, MAT_DARK,
-        loc=(-2.55, y, GROUND + 0.12), rot=(0, math.radians(8), 0))
+# Measured against the body-shell mesh: at the previous x=-2.55/-2.70 the tail has already
+# tapered to half-width ~0.50/~0.19, well inside the fins' +-0.55 and the exhaust tips' +-0.35
+# spread -- both poked out past the actual tapered surface (visible as detached geometry hovering
+# past the tail in a render). Pulled forward to x=-2.40, inside the wider rear-bumper region
+# (body half-width ~0.65-0.82 there), and narrowed to stay inside that footprint.
+for i, y in enumerate((-0.50, -0.18, 0.18, 0.50)):
+    box(f"diffuserFin_{i}", (0.4, 0.03, 0.10), chassis_root, MAT_DARK,
+        loc=(-2.40, y, GROUND + 0.12), rot=(0, math.radians(8), 0))
 for side in (-1, 1):
     cyl(f"exhaustTip_{'L' if side < 0 else 'R'}", 0.055, 0.14, chassis_root, MAT_METAL,
-        loc=(-2.70, side * 0.35, GROUND + 0.10), rot=(0, math.radians(90), 0), smooth=True)
+        loc=(-2.40, side * 0.30, GROUND + 0.10), rot=(0, math.radians(90), 0), smooth=True)
 
 # ducktail lip spoiler on the decklid trailing edge (reference: a small integrated lip, not a
 # strut-mounted wing)
 box("deckLip", (0.22, 1.15, 0.03), chassis_root, MAT_DARK, loc=(-1.95, 0, GROUND + 0.475),
     rot=(0, math.radians(-6), 0))
 
-# headlights and quad taillights (reference: two round-ish lamps per side, not one block)
+# headlights and quad taillights (reference: two round-ish lamps per side, not one block).
+# Measured: at x=2.55 the body's top surface reaches only ~GROUND+0.356 (world 0.856 with
+# GROUND=0.50); GROUND+0.36 put the box mostly above that surface (visible as a detached white
+# wedge floating over the fender). Lowered to embed it within the body height instead.
 for side in (-1, 1):
     box(f"headlight_{'L' if side < 0 else 'R'}", (0.06, 0.22, 0.14), chassis_root, MAT_LIGHT,
-        loc=(2.55, side * 0.55, GROUND + 0.36))
+        loc=(2.55, side * 0.55, GROUND + 0.28))
     for j, zz in enumerate((-0.05, 0.05)):
         box(f"taillight_{'L' if side < 0 else 'R'}_{j}", (0.05, 0.10, 0.055), chassis_root, MAT_CALIPER,
             loc=(-2.35, side * 0.55, GROUND + 0.40 + zz))
 
 # grille mesh: horizontal slats set into the opening (parts reference calls out a distinct
-# "grille mesh" sub-assembly, not a painted-over opening)
-for i, z in enumerate(np.linspace(-0.08, 0.08, 6)):
-    box(f"grilleSlat_{i}", (0.02, 0.55, 0.012), chassis_root, MAT_DARK,
-        loc=(2.62, 0, GROUND + 0.30 + z))
+# "grille mesh" sub-assembly, not a painted-over opening); repositioned with grilleOpening above.
+for i, z in enumerate(np.linspace(-0.07, 0.07, 6)):
+    box(f"grilleSlat_{i}", (0.02, 0.52, 0.012), chassis_root, MAT_DARK,
+        loc=(2.46, 0, GROUND + 0.20 + z))
 
 # door seam lines: thin recessed dark strips on both flanks, marking the door split called out in
 # the parts/disassembly reference (front door and rear quarter panel), instead of one uninterrupted
@@ -357,7 +386,12 @@ for side in (-1, 1):
 # ================= ENGINE BAY (under the hood, ahead of the cowl) =================
 engine_bay = new_empty("engineBay", parent=chassis_root, loc=(1.55, 0, GROUND + 0.06))
 box("engineBlock", (0.55, 0.50, 0.34), engine_bay, MAT_DARK, loc=(0, 0, 0.17))
-cyl("supercharger", 0.15, 0.28, engine_bay, MAT_METAL, loc=(0, 0, 0.42), rot=(math.radians(90), 0, 0), smooth=True)
+# Measured: at x=1.55 the hood surface tops out at ~GROUND+0.461 (world 0.961). The old
+# supercharger position (engine_bay z + local 0.42 + radius 0.15 = world 1.13) poked ~0.17 above
+# that with no scoop housing to cover it, rendering as a disconnected grey dome floating over the
+# hood. Lowered so it sits fully enclosed under the hood instead (there's no scoop mesh here to
+# justify a visible bulge -- hoodVent below represents the intake cue at the surface).
+cyl("supercharger", 0.15, 0.28, engine_bay, MAT_METAL, loc=(0, 0, 0.15), rot=(math.radians(90), 0, 0), smooth=True)
 cyl("radiator", 0.30, 0.09, engine_bay, MAT_METAL, loc=(0.42, 0, 0.15), rot=(0, math.radians(90), 0))
 for side in (-1, 1):
     cyl(f"header_{'L' if side < 0 else 'R'}", 0.03, 0.5, engine_bay, MAT_METAL,
