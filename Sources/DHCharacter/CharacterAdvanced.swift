@@ -1,0 +1,9 @@
+import Foundation
+import DHCore
+
+public enum Perk:String,Codable,CaseIterable,Sendable { case greaseMonkey,roadWarrior,scrounger,fieldMedic,silverTongue,deadeye,packMule,nightDriver }
+public enum EquipmentSlot:String,Codable,CaseIterable,Sendable { case head,body,hands,primary,secondary,tool }
+public struct EquipmentItem:Identifiable,Codable,Sendable,Equatable { public let id:EntityID; public var name:String; public var slot:EquipmentSlot; public var armor:Double; public var durability:Double; public init(id:EntityID=UUID(),name:String,slot:EquipmentSlot,armor:Double=0,durability:Double=1){self.id=id;self.name=name;self.slot=slot;self.armor=armor;self.durability=durability} }
+public struct CharacterProgression:Codable,Sendable,Equatable { public var level=1; public var xp=0; public var perks:Set<Perk>=[]; public init(){}; public mutating func awardXP(_ amount:Int){xp += max(0,amount); while xp >= level*100 { xp -= level*100; level += 1 }}; public mutating func addPerk(_ perk:Perk){perks.insert(perk)} }
+public struct InjuryState:Identifiable,Codable,Sendable,Equatable { public let id:EntityID; public var kind:Injury; public var severity:Double; public var bodyPart:String; public init(id:EntityID=UUID(),kind:Injury,severity:Double,bodyPart:String){self.id=id;self.kind=kind;self.severity=max(0,min(1,severity));self.bodyPart=bodyPart} }
+public enum CharacterSystems { public static func carryCapacity(_ c:CharacterState, progression:CharacterProgression)->Double { let base=30+Double(c.attributes[.strength,default:5])*5; return progression.perks.contains(.packMule) ? base*1.35:base }; public static func movementMultiplier(_ c:CharacterState,injuries:[InjuryState])->Double { let burden=min(0.45,c.carryMass/120); let injury=injuries.reduce(0){$0+$1.severity*0.08}; return max(0.25,1-burden-injury) } }

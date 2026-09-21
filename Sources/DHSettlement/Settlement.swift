@@ -1,0 +1,8 @@
+import Foundation
+import DHCore
+import DHWorld
+import DHNPC
+public enum Resource:String,Codable,CaseIterable,Sendable { case food,water,crude,fuel,medicine,ammunition,ore,metal,machinery,electricity,parts }
+public struct ProductionRecipe:Codable,Sendable,Equatable { public var inputs:[Resource:Double]; public var outputs:[Resource:Double]; public var electricity:Double }
+public struct SettlementState:Identifiable,Codable,Sendable,Equatable { public let id:EntityID; public var name:String; public var site:BlackridgeSite; public var population:Int; public var inventory:[Resource:Double]; public var recipes:[ProductionRecipe]; public var defense:Double; public var prosperity:Double; public var controllingFaction:Faction?; public init(id:EntityID=UUID(),name:String,site:BlackridgeSite,population:Int){self.id=id;self.name=name;self.site=site;self.population=population;inventory=Dictionary(uniqueKeysWithValues:Resource.allCases.map{($0,0)});recipes=[];defense=0.2;prosperity=0.2}; public mutating func produce(){for r in recipes where inventory[.electricity,default:0]>=r.electricity && r.inputs.allSatisfy({inventory[$0.key,default:0] >= $0.value}) { for (k,v) in r.inputs{inventory[k,default:0]-=v};inventory[.electricity,default:0]-=r.electricity;for(k,v) in r.outputs{inventory[k,default:0]+=v}}} }
+public enum ParadiseFactory { public static func make()->SettlementState { var s=SettlementState(name:"Paradise",site:.truckStop,population:150);s.inventory[.food]=300;s.inventory[.water]=500;s.inventory[.fuel]=180;s.inventory[.electricity]=120;s.inventory[.parts]=35;s.recipes=[.init(inputs:[.metal:2],outputs:[.parts:1],electricity:2)];return s } }

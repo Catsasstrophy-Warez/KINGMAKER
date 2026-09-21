@@ -1,0 +1,7 @@
+import Foundation
+import DHCore
+import DHVehicle
+public enum VehicleClass:String,Codable,CaseIterable,Sendable { case motorcycle,atv,buggy,sedan,muscleCar,interceptor,pickup,van,towTruck,ambulance,bus,semi,tanker,armored,military,wastelandCustom,wreck }
+public enum FuelKind:String,Codable,Sendable { case gasoline,diesel,ethanol,woodGas,electric }
+public struct FleetVehicle:Identifiable,Codable,Sendable,Equatable { public let id:EntityID; public var name:String; public var kind:VehicleClass; public var fuel:FuelKind; public var fuelLiters:Double; public var condition:Double; public var cargoKG:Double; public var stolen=false; public var hotwired=false; public var towTarget:EntityID?; public init(id:EntityID=UUID(),name:String,kind:VehicleClass,fuel:FuelKind,liters:Double,condition:Double=1){self.id=id;self.name=name;self.kind=kind;self.fuel=fuel;fuelLiters=liters;self.condition=condition;cargoKG=0} }
+public struct FleetState:Codable,Sendable,Equatable { public var vehicles:[EntityID:FleetVehicle]=[:]; public init(){}; public mutating func add(_ v:FleetVehicle){vehicles[v.id]=v}; public mutating func hotwire(_ id:EntityID,skill:Int)->Bool { guard var v=vehicles[id], skill>=3 else{return false};v.hotwired=true;v.stolen=true;vehicles[id]=v;return true }; public mutating func tow(tower:EntityID,target:EntityID)->Bool { guard var a=vehicles[tower],vehicles[target] != nil else{return false};a.towTarget=target;vehicles[tower]=a;return true } }

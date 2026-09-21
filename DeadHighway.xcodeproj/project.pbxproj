@@ -1,0 +1,352 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		01F6CB481B457917D571E5FF /* DeadHighwayApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26E797E9A5D8B471D2958137 /* DeadHighwayApp.swift */; };
+		0C2CBF00417C4D05741CC0CB /* DHPresentation in Frameworks */ = {isa = PBXBuildFile; productRef = 91DAE125B1A8CB187312C7A9 /* DHPresentation */; };
+		4814AE7F2A90E55DD1B47894 /* GameRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98C7D67E4D4764BCA677B400 /* GameRootView.swift */; };
+		4F5F80CBEFA2BDA23798BD9B /* DHVehicle in Frameworks */ = {isa = PBXBuildFile; productRef = A4F063DDBD02BC4920410DF5 /* DHVehicle */; };
+		D9477109AD82775E3A93541A /* DHGameplay in Frameworks */ = {isa = PBXBuildFile; productRef = 1004A425E5670A9DAE28D38D /* DHGameplay */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		26E797E9A5D8B471D2958137 /* DeadHighwayApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeadHighwayApp.swift; sourceTree = "<group>"; };
+		59A5B12A5BBDF657C826E7A8 /* KINGMAKER */ = {isa = PBXFileReference; lastKnownFileType = folder; name = KINGMAKER; path = .; sourceTree = SOURCE_ROOT; };
+		76EF1D94EB6F99A94A602CAD /* DeadHighway.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = DeadHighway.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		98C7D67E4D4764BCA677B400 /* GameRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameRootView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		81FB1431E84EAD43284F65DC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0C2CBF00417C4D05741CC0CB /* DHPresentation in Frameworks */,
+				D9477109AD82775E3A93541A /* DHGameplay in Frameworks */,
+				4F5F80CBEFA2BDA23798BD9B /* DHVehicle in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		1ACBFA1F4784393C7AF9785F /* DeadHighwayApp */ = {
+			isa = PBXGroup;
+			children = (
+				26E797E9A5D8B471D2958137 /* DeadHighwayApp.swift */,
+				98C7D67E4D4764BCA677B400 /* GameRootView.swift */,
+			);
+			name = DeadHighwayApp;
+			path = App/DeadHighwayApp;
+			sourceTree = "<group>";
+		};
+		2ADBBB3F916EA2245FEC31B8 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				59A5B12A5BBDF657C826E7A8 /* KINGMAKER */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		C9A3E3D471F35F5B0D40AFA5 = {
+			isa = PBXGroup;
+			children = (
+				1ACBFA1F4784393C7AF9785F /* DeadHighwayApp */,
+				2ADBBB3F916EA2245FEC31B8 /* Packages */,
+				E98594808DBDA3F9F8598946 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		E98594808DBDA3F9F8598946 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				76EF1D94EB6F99A94A602CAD /* DeadHighway.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AFFADC52C3871673A30D45A3 /* DeadHighway */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8E82FDAEC234B6DCD06A7981 /* Build configuration list for PBXNativeTarget "DeadHighway" */;
+			buildPhases = (
+				89940BCDA9AC3FBA8F037E1B /* Sources */,
+				81FB1431E84EAD43284F65DC /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DeadHighway;
+			packageProductDependencies = (
+				91DAE125B1A8CB187312C7A9 /* DHPresentation */,
+				1004A425E5670A9DAE28D38D /* DHGameplay */,
+				A4F063DDBD02BC4920410DF5 /* DHVehicle */,
+			);
+			productName = DeadHighway;
+			productReference = 76EF1D94EB6F99A94A602CAD /* DeadHighway.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		23B17FC1D9ADDF002E93A296 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+				};
+			};
+			buildConfigurationList = CD3D18B5F584A88A6A1F7AFA /* Build configuration list for PBXProject "DeadHighway" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = C9A3E3D471F35F5B0D40AFA5;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				C75BBD2286BB980639BB990F /* XCLocalSwiftPackageReference "." */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = E98594808DBDA3F9F8598946 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AFFADC52C3871673A30D45A3 /* DeadHighway */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		89940BCDA9AC3FBA8F037E1B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				01F6CB481B457917D571E5FF /* DeadHighwayApp.swift in Sources */,
+				4814AE7F2A90E55DD1B47894 /* GameRootView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		15CDB3B680231F9FE892C2BB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGN_IDENTITY = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.deadhighway.game;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		26ECB5B29651B3DAFC36A75E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		C32C52910C77283B44AE0C77 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGN_IDENTITY = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.deadhighway.game;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		F9FFC804D3236A870109D880 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		8E82FDAEC234B6DCD06A7981 /* Build configuration list for PBXNativeTarget "DeadHighway" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C32C52910C77283B44AE0C77 /* Debug */,
+				15CDB3B680231F9FE892C2BB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		CD3D18B5F584A88A6A1F7AFA /* Build configuration list for PBXProject "DeadHighway" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F9FFC804D3236A870109D880 /* Debug */,
+				26ECB5B29651B3DAFC36A75E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		C75BBD2286BB980639BB990F /* XCLocalSwiftPackageReference "." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = .;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		1004A425E5670A9DAE28D38D /* DHGameplay */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = DHGameplay;
+		};
+		91DAE125B1A8CB187312C7A9 /* DHPresentation */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = DHPresentation;
+		};
+		A4F063DDBD02BC4920410DF5 /* DHVehicle */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = DHVehicle;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 23B17FC1D9ADDF002E93A296 /* Project object */;
+}

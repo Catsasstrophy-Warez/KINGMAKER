@@ -1,0 +1,21 @@
+property,category,priority,dead_highway_use,status
+Pacific Drive,vehicle diagnostics,P0,component repair and diagnostic UX,to-verify
+Project Zomboid,vehicles/towing,P0,towing maintenance scavenging,to-verify
+My Summer Car,mechanical simulation,P0,individual wear failure assembly,verified-primary
+Hard Truck Apocalypse,trade/convoys,P0,settlement supply routes,verified-primary
+Kenshi,economy/factions,P0,autonomous territorial production state,to-verify
+Space Rangers 2,autonomous sandbox,P0,NPC economy and strategic simulation,to-verify
+Interstate 76,salvage/damage,P1,persistent wreck salvage,verified-secondary
+Fallout 1 & 2,isometric RPG,P1,encounters exploration vehicle utility,to-verify
+Wasteland 2 & 3,isometric RPG,P1,tactical vehicle party hub,to-verify
+Jalopy,road maintenance,P1,fragile car road trip,to-verify
+Car Wars,tabletop vehicle combat,P1,mass placement armor weapon arcs,to-verify
+Gaslands,tabletop vehicle combat,P1,momentum skid gear abstractions,to-verify
+Twilight 2000,survival logistics,P1,fuel spares towing maintenance,to-verify
+Mad Max universe,visual/world reference,P1,convoy scale resource conflict,to-verify
+The Rover,visual reference,P2,credible decay empty-road framing,to-verify
+Book of Eli,visual reference,P2,lighting and scarcity,to-verify
+Mortal Engines,industrial scale,P2,large machinery silhouettes,to-verify
+Girls Last Tour,atmosphere,P2,quiet exploration scarcity,to-verify
+Redline,kinetic reference,P2,speed readability,to-verify
+Consolidated DEAD HIGHWAY design framework,internal design synthesis,P0,vehicle identity world simulation factions radio and tone,design-brief

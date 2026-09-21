@@ -1,0 +1,34 @@
+name: DeadHighway
+options:
+  bundleIdPrefix: com.deadhighway
+  deploymentTarget:
+    iOS: "18.0"
+    macOS: "15.0"
+packages:
+  DeadHighwayCore:
+    path: .
+targets:
+  DeadHighway:
+    type: application
+    platform: iOS
+    sources: [App/DeadHighwayApp]
+    dependencies:
+      - package: DeadHighwayCore
+        product: DHPresentation
+      - package: DeadHighwayCore
+        product: DHGameplay
+      - package: DeadHighwayCore
+        product: DHVehicle
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.deadhighway.game
+        SWIFT_VERSION: 6.0
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        SUPPORTS_MACCATALYST: YES
+        # Simulator/Mac development is intentionally non-signing. Set these once
+        # for local rendering so Xcode does not repeatedly request a team.
+        CODE_SIGNING_ALLOWED: NO
+        CODE_SIGNING_REQUIRED: NO
+        CODE_SIGN_IDENTITY: ""

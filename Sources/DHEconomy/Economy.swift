@@ -1,0 +1,7 @@
+import Foundation
+import DHCore
+import DHWorld
+import DHSettlement
+import DHFleet
+public struct TradeRoute:Identifiable,Codable,Sendable,Equatable { public let id:EntityID; public var origin:EntityID; public var destination:EntityID; public var resource:Resource; public var amount:Double; public var convoy:EntityID?; public var disrupted=false; public init(id:EntityID=UUID(),origin:EntityID,destination:EntityID,resource:Resource,amount:Double){self.id=id;self.origin=origin;self.destination=destination;self.resource=resource;self.amount=amount} }
+public struct RegionalEconomy:Codable,Sendable,Equatable { public var settlements:[EntityID:SettlementState]=[:]; public var routes:[EntityID:TradeRoute]=[:]; public init(settlements:[EntityID:SettlementState]=[:],routes:[EntityID:TradeRoute]=[:]){self.settlements=settlements;self.routes=routes}; public mutating func deliver(_ routeID:EntityID)->Bool { guard let r=routes[routeID],!r.disrupted,var a=settlements[r.origin],var b=settlements[r.destination],a.inventory[r.resource,default:0]>=r.amount else{return false};a.inventory[r.resource,default:0]-=r.amount;b.inventory[r.resource,default:0]+=r.amount;settlements[a.id]=a;settlements[b.id]=b;return true }; public func price(_ resource:Resource,at id:EntityID)->Double { guard let s=settlements[id] else{return 1};let stock=s.inventory[resource,default:0];return max(0.25,min(8,2/(1+stock/100))) } }
