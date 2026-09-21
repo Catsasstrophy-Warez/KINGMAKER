@@ -130,7 +130,7 @@ import Testing
 @Test func rev10VehicleEncounterRuntimeIsPlayable() {
     var encounter = DHVehicleEncounterRuntime()
     encounter.tick(); encounter.tick(); encounter.tick()
-    #expect(encounter.encounter.presentation == .attacking)
+    #expect(encounter.encounter.phase == .attacking)
     encounter.fire(rounds: 5, damage: 25)
     #expect(encounter.resolved)
     #expect(encounter.encounter.radioEventID == "radio.north-road.consequence")
