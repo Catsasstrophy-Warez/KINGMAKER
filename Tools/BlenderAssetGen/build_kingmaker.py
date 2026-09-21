@@ -231,25 +231,33 @@ bevel.segments = 2
 # fastback greenhouse: a distinct, narrower volume stepped up from the beltline, roof flowing
 # down into the decklid (the "fastback roof" the visual canon calls for), sitting only over the
 # cabin span so the wide rear haunches remain visible outside it.
+# Reference (ResearchLibrary/ReferenceImages/ref_side.png) shows a much lower, longer,
+# more rakish fastback roofline than a first pass gave it -- roof peak lower relative to
+# the body, and the rear glass taper stretched out over a longer run instead of a sharp
+# step down into the decklid.
 green_sections = [
-    (0.65, 0.80, 0.50, 0.60),    # windshield base
-    (0.15, 0.80, 0.50, 1.00),    # roof front (A-pillar)
-    (-0.80, 0.80, 0.50, 1.00),   # roof rear
-    (-1.45, 0.84, 0.46, 0.50),   # fastback taper into decklid
+    (0.95, 0.78, 0.50, 0.56),    # windshield base
+    (0.45, 0.80, 0.50, 0.84),    # roof front (A-pillar)
+    (-0.90, 0.80, 0.50, 0.84),   # roof rear -- wide flat plateau (0.45 -> -0.90) so the roof
+                                 # reads as a roof at full-car scale, not a short tent apex
+    (-1.85, 0.84, 0.44, 0.46),   # long, shallow fastback taper into the decklid
 ]
 
 def green_ring(half_w, base_z, roof_z):
+    # a much flatter top than a 0.7-factor trapezoid gives: a real roof panel, not a tent ridge
     return [
         (-half_w, base_z),
-        (-half_w * 0.7, roof_z),
-        (half_w * 0.7, roof_z),
+        (-half_w * 0.92, roof_z),
+        (half_w * 0.92, roof_z),
         (half_w, base_z),
     ]
 
 greenhouse = loft("greenhouse", green_sections, body_panels, MAT_GLASSHOUSE, ring_fn=green_ring)
 
-# hood scoop feeding the supercharger
-box("hoodScoop", (0.34, 0.30, 0.09), body_panels, MAT_DARK, loc=(1.55, 0, GROUND + 0.50))
+# hood vents (reference shows low hood vents/scoop, not one tall bulge)
+for side in (-1, 1):
+    box(f"hoodVent_{'L' if side < 0 else 'R'}", (0.28, 0.14, 0.045), body_panels, MAT_DARK,
+        loc=(1.55, side * 0.28, GROUND + 0.475))
 
 # front splitter (low aero lip ahead of the bumper) and push bar
 wedge("frontSplitter",
@@ -260,30 +268,35 @@ for side in (-1, 1):
     cyl(f"pushBarUpright_{'L' if side < 0 else 'R'}", 0.025, 0.20, chassis_root, MAT_METAL,
         loc=(2.70, side * 0.58, GROUND + 0.14))
 
-# rear diffuser fins
+# deep front grille opening (reference: a large dark lower opening, not a flat painted panel)
+box("grilleOpening", (0.10, 0.62, 0.20), chassis_root, MAT_DARK, loc=(2.66, 0, GROUND + 0.30))
+
+# rear diffuser fins + dual exhaust tips
 for i, y in enumerate((-0.55, -0.2, 0.2, 0.55)):
     box(f"diffuserFin_{i}", (0.5, 0.03, 0.10), chassis_root, MAT_DARK,
         loc=(-2.55, y, GROUND + 0.12), rot=(0, math.radians(8), 0))
-
-# active rear wing: two struts + a blade, mounted low on the decklid, well clear of the roof
-# cargo rack so the two don't visually collide from the rear.
 for side in (-1, 1):
-    box(f"wingStrut_{'L' if side < 0 else 'R'}", (0.04, 0.04, 0.22), chassis_root, MAT_DARK,
-        loc=(-2.35, side * 0.55, GROUND + 0.55))
-box("wingBlade", (0.45, 1.25, 0.035), chassis_root, MAT_DARK, loc=(-2.35, 0, GROUND + 0.66))
+    cyl(f"exhaustTip_{'L' if side < 0 else 'R'}", 0.055, 0.14, chassis_root, MAT_METAL,
+        loc=(-2.70, side * 0.35, GROUND + 0.10), rot=(0, math.radians(90), 0))
 
-# headlights
+# ducktail lip spoiler on the decklid trailing edge (reference: a small integrated lip, not a
+# strut-mounted wing)
+box("deckLip", (0.22, 1.15, 0.03), chassis_root, MAT_DARK, loc=(-1.95, 0, GROUND + 0.475),
+    rot=(0, math.radians(-6), 0))
+
+# headlights and quad taillights (reference: two round-ish lamps per side, not one block)
 for side in (-1, 1):
     box(f"headlight_{'L' if side < 0 else 'R'}", (0.06, 0.22, 0.14), chassis_root, MAT_LIGHT,
         loc=(2.55, side * 0.55, GROUND + 0.36))
-    box(f"taillight_{'L' if side < 0 else 'R'}", (0.06, 0.24, 0.12), chassis_root, MAT_CALIPER,
-        loc=(-2.35, side * 0.55, GROUND + 0.40))
+    for j, zz in enumerate((-0.05, 0.05)):
+        box(f"taillight_{'L' if side < 0 else 'R'}_{j}", (0.05, 0.10, 0.055), chassis_root, MAT_CALIPER,
+            loc=(-2.35, side * 0.55, GROUND + 0.40 + zz))
 
-# grille mesh: horizontal slats across the front fascia (parts reference calls out a distinct
+# grille mesh: horizontal slats set into the opening (parts reference calls out a distinct
 # "grille mesh" sub-assembly, not a painted-over opening)
-for i, z in enumerate(np.linspace(-0.05, 0.05, 5)):
-    box(f"grilleSlat_{i}", (0.02, 0.45, 0.012), chassis_root, MAT_DARK,
-        loc=(2.58, 0, GROUND + 0.36 + z))
+for i, z in enumerate(np.linspace(-0.08, 0.08, 6)):
+    box(f"grilleSlat_{i}", (0.02, 0.55, 0.012), chassis_root, MAT_DARK,
+        loc=(2.62, 0, GROUND + 0.30 + z))
 
 # door seam lines: thin recessed dark strips on both flanks, marking the door split called out in
 # the parts/disassembly reference (front door and rear quarter panel), instead of one uninterrupted
@@ -323,8 +336,9 @@ wheels = new_empty("wheels", parent=chassis_root)
 
 def make_wheel(name, x, y):
     grp = new_empty(name, parent=wheels, loc=(x, y, GROUND))
-    torus(name + "_tire", 0.38, 0.115, grp, MAT_RUBBER, loc=(0, 0, 0), rot=(math.radians(90), 0, 0))
-    cyl(name + "_rim", 0.22, 0.20, grp, MAT_METAL, loc=(0, 0, 0), rot=(math.radians(90), 0, 0), segs=10)
+    # reference shows a low-profile performance tire: big alloy rim, thin sidewall
+    torus(name + "_tire", 0.40, 0.075, grp, MAT_RUBBER, loc=(0, 0, 0), rot=(math.radians(90), 0, 0))
+    cyl(name + "_rim", 0.32, 0.21, grp, MAT_METAL, loc=(0, 0, 0), rot=(math.radians(90), 0, 0), segs=12)
     cyl(name + "_rotor", 0.19, 0.02, grp, MAT_METAL, loc=(0, -y / abs(y) * 0.08, 0), rot=(math.radians(90), 0, 0), segs=20)
     box(name + "_caliper", (0.10, 0.06, 0.10), grp, MAT_CALIPER, loc=(0.14, -y / abs(y) * 0.14, 0))
     return grp
@@ -339,28 +353,28 @@ cabin = new_empty("cabin", parent=chassis_root, loc=(-0.15, 0, GROUND + 0.50))
 box("cabinFloor", (1.55, 0.85, 0.04), cabin, MAT_DARK, loc=(0, 0, -0.02))
 box("seatDriver", (0.38, 0.32, 0.26), cabin, MAT_DARK, loc=(0.15, 0.26, 0.14))
 box("seatPassenger", (0.38, 0.32, 0.26), cabin, MAT_DARK, loc=(0.15, -0.26, 0.14))
+# roof peak sits at cabin-local z=0.40 (world GROUND+0.90); keep the cage well under that
 for side in (-1, 1):
-    cyl(f"rollCage_{'L' if side < 0 else 'R'}", 0.025, 0.55, cabin, MAT_METAL,
-        loc=(0, side * 0.75, 0.28), rot=(0, 0, 0))
-box("rollCageBar", (1.4, 0.03, 0.03), cabin, MAT_METAL, loc=(0, 0, 0.55))
+    cyl(f"rollCage_{'L' if side < 0 else 'R'}", 0.022, 0.26, cabin, MAT_METAL,
+        loc=(0, side * 0.75, 0.13), rot=(0, 0, 0))
+box("rollCageBar", (1.4, 0.025, 0.025), cabin, MAT_METAL, loc=(0, 0, 0.26))
 box("pedalBox", (0.14, 0.20, 0.12), cabin, MAT_DARK, loc=(0.75, 0.15, 0.02))
 
 dashboard = new_empty("dashboard", parent=cabin, loc=(0.62, 0, 0.10))
 box("dashPanel", (0.08, 0.78, 0.24), dashboard, MAT_DARK, loc=(0, 0, 0))
 cyl("tachometer", 0.05, 0.02, dashboard, MAT_LIGHT, loc=(0.05, 0.20, 0.05), rot=(0, math.radians(90), 0))
 
-# ================= ARMOR (wasteland roof brace/push-bar plating already covers front; add a
-# roof plate sized to the greenhouse, not the whole car) =================
-armor = new_empty("armor", parent=chassis_root, loc=(0, 0, GROUND + 1.01))
-box("roofBrace", (1.15, 0.62, 0.025), armor, MAT_ARMOR, loc=(-0.32, 0, 0))
+# ================= ARMOR (wasteland roof brace/push-bar plating; a roof plate sized to and
+# sitting flush on the greenhouse, whose peak is now GROUND+0.90, not the old GROUND+1.00) =================
+armor = new_empty("armor", parent=chassis_root, loc=(0, 0, GROUND + 0.845))
+box("roofBrace", (1.25, 0.58, 0.02), armor, MAT_ARMOR, loc=(-0.20, 0, 0))
 
-# ================= CARGO RACK (roof-mounted, wasteland module; over the roof brace, forward
-# of the wing so the two don't overlap) =================
-cargo = new_empty("cargo", parent=chassis_root, loc=(-0.55, 0, GROUND + 1.03))
-box("rackBed", (0.75, 0.85, 0.04), cargo, MAT_CARGO, loc=(0, 0, 0))
+# ================= CARGO RACK (roof-mounted, wasteland module; sits just above the roof brace) =================
+cargo = new_empty("cargo", parent=chassis_root, loc=(-0.40, 0, GROUND + 0.865))
+box("rackBed", (0.70, 0.80, 0.03), cargo, MAT_CARGO, loc=(0, 0, 0))
 for side in (-1, 1):
-    cyl("rackRail" + ("L" if side < 0 else "R"), 0.018, 0.75, cargo, MAT_METAL,
-        loc=(0, side * 0.40, 0.06), rot=(math.radians(90), 0, 0))
+    cyl("rackRail" + ("L" if side < 0 else "R"), 0.015, 0.70, cargo, MAT_METAL,
+        loc=(0, side * 0.38, 0.045), rot=(math.radians(90), 0, 0))
 
 # ---------- UV unwrap every mesh (smart project) so the image textures above map correctly;
 # the bmesh-built meshes (bodyShell, greenhouse, splitter, diffuser fins) have no UVs at all until

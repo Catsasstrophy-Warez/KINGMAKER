@@ -2,6 +2,16 @@
 
 This specification defines the modeling and image-reference set for the Kingmaker. It is a target for production assets, not a claim that the ten views are already rendered.
 
+**Update**: several of the views below are now rendered. See
+`ReferenceImages/XR13_OrthogonalsAndWasteland.png` for front/side/rear orthogonals,
+top-down, underneath, engine bay, suspension/brakes, cabin, dashboard, and the
+wasteland target view — this single image covers most of views 1-10 below in one
+reference sheet and should be treated as their canonical realization. See also
+`ReferenceImages/XR13_DisassemblyAndComponentBreakdown.png` and
+`ReferenceImages/XR13_ParkDisassembly_DamagedRustedBrokenRepaired.png` for the
+exploded parts/disassembly and condition-state references, which extend beyond what
+this spec's ten views originally called for.
+
 ## Restored engineering views
 
 1. Front orthographic: broad fictional XR-13 grille, compact LED clusters, hood-mounted supercharger intake, performance tires, and clean workshop floor.

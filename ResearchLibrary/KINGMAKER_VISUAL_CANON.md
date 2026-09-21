@@ -2,6 +2,13 @@
 
 Kingmaker is an original fictional vehicle. It may synthesize broad automotive eras and performance philosophies, but it must not reproduce real-world badges, logos, or a specific production car.
 
+**Canonical reference images**: see `ReferenceImages/` in this directory for the
+project owner's own reference renders (restored-config orthogonals, wasteland
+configuration, engine bay, cockpit/dashboard, and a full disassembly/condition-state
+breakdown). Where this text spec and those images disagree, the images are ground
+truth for shape and finish; this document remains the reference for naming, canon
+rules, and constraints.
+
 ## Unified silhouette
 
 - Compact fastback cabin and clean early-line purity
