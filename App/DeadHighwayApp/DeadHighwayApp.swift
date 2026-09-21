@@ -16,6 +16,8 @@ import DHGameplay
 }
 
 private struct DHRev10SessionDocument: Codable {
+    static let currentSchemaVersion = 1
+
     let schemaVersion: Int
     var slice: DHRev10VerticalSlice
     var coordinator: DHRev10SliceCoordinator
@@ -29,7 +31,7 @@ private struct DHRev10SessionDocument: Codable {
     var inVehicle: Bool
 
     @MainActor init(session: DeadHighwaySession) {
-        schemaVersion = 1
+        schemaVersion = Self.currentSchemaVersion
         slice = session.slice
         coordinator = session.coordinator
         avatar = session.avatar
@@ -40,6 +42,19 @@ private struct DHRev10SessionDocument: Codable {
         loot = session.loot
         paradise = session.paradise
         inVehicle = session.inVehicle
+    }
+
+    /// Decodes a session document and rejects anything whose schema version we don't recognize,
+    /// rather than silently accepting a struct shape we didn't actually validate. A future schema
+    /// bump belongs here (migrate old versions forward) instead of relying on Codable's
+    /// missing-key defaulting to paper over the difference between "old data" and "corrupt data".
+    static func decodeCurrent(_ data: Data) -> DHRev10SessionDocument? {
+        guard let document = try? JSONDecoder().decode(DHRev10SessionDocument.self, from: data) else { return nil }
+        guard document.schemaVersion == currentSchemaVersion else {
+            assertionFailure("DHRev10SessionDocument schema version \(document.schemaVersion) is not the current version \(currentSchemaVersion); add a migration instead of loading it as-is")
+            return nil
+        }
+        return document
     }
 }
 
@@ -58,15 +73,32 @@ private struct DHRev10SessionDocument: Codable {
     init(){
         trade.player=[.init(id:"salvaged.alternator",name:"Salvaged Alternator",massKG:6.8,value:38)]
         trade.merchant=[.init(id:"hose.upper",name:"Upper Radiator Hose",massKG:0.5,value:14),.init(id:"fuel.filter",name:"Fuel Filter",massKG:0.3,value:11)]
-        if let data = UserDefaults.standard.data(forKey: saveKey) {
-            if let document = try? JSONDecoder().decode(DHRev10SessionDocument.self, from: data) {
-                slice = document.slice; coordinator = document.coordinator; avatar = document.avatar; drive = document.drive; camera = document.camera; trade = document.trade; repair = document.repair; loot = document.loot; paradise = document.paradise; inVehicle = document.inVehicle; message = "RESTORED \(slice.beat.rawValue.uppercased())"
-            } else if let saved = try? DHRev10SaveDocument.decoded(data) {
-                slice = saved; message = "RESTORED \(saved.beat.rawValue.uppercased())"
-            }
+        if let data = UserDefaults.standard.data(forKey: saveKey), loadSaved(from: data) {
+            message = "RESTORED \(slice.beat.rawValue.uppercased())"
         }
         coordinator.kingmaker = slice.kingmaker
         syncHUD()
+    }
+
+    /// Shared by init and reloadSlice so the current-schema/legacy-fallback decode logic exists in
+    /// exactly one place; previously each copy could silently drift out of sync with the other.
+    /// Returns whether anything was loaded.
+    @discardableResult
+    private func loadSaved(from data: Data) -> Bool {
+        if let document = DHRev10SessionDocument.decodeCurrent(data) {
+            apply(document)
+            return true
+        }
+        if let saved = try? DHRev10SaveDocument.decoded(data) {
+            slice = saved
+            coordinator.kingmaker = saved.kingmaker
+            return true
+        }
+        return false
+    }
+
+    private func apply(_ document: DHRev10SessionDocument) {
+        slice = document.slice; coordinator = document.coordinator; avatar = document.avatar; drive = document.drive; camera = document.camera; trade = document.trade; repair = document.repair; loot = document.loot; paradise = document.paradise; inVehicle = document.inVehicle
     }
     func advanceSlice() {
         let next: [DHRev10Beat: DHRev10Beat] = [.garage:.inspect, .inspect:.diagnose, .diagnose:.scavenge, .scavenge:.repair, .repair:.start, .start:.drive, .drive:.hostileEncounter, .hostileEncounter:.radioConsequence, .radioConsequence:.paradise, .paradise:.negotiate, .negotiate:.recruit, .recruit:.save, .save:.reload]
@@ -82,7 +114,7 @@ private struct DHRev10SessionDocument: Codable {
         }
     }
     func saveSlice() { coordinator.kingmaker = slice.kingmaker; if let data = try? JSONEncoder().encode(DHRev10SessionDocument(session: self)) { UserDefaults.standard.set(data, forKey: saveKey); message = "WORLD SAVED" } }
-    func reloadSlice() { if let data = UserDefaults.standard.data(forKey: saveKey), let document = try? JSONDecoder().decode(DHRev10SessionDocument.self, from: data) { slice = document.slice; coordinator = document.coordinator; avatar = document.avatar; drive = document.drive; camera = document.camera; trade = document.trade; repair = document.repair; loot = document.loot; paradise = document.paradise; inVehicle = document.inVehicle; message = "WORLD RELOADED"; syncHUD() } else if let data = UserDefaults.standard.data(forKey: saveKey), let saved = try? DHRev10SaveDocument.decoded(data) { slice = saved; coordinator.kingmaker = saved.kingmaker; message = "WORLD RELOADED"; syncHUD() } }
+    func reloadSlice() { guard let data = UserDefaults.standard.data(forKey: saveKey) else { return }; if loadSaved(from: data) { message = "WORLD RELOADED"; syncHUD() } }
     func inspectKingmaker() { coordinator.inspect(.kingmakerExterior); camera.inspectGarage(); interaction.focus(DHRev10InteractionCatalog.garage[0]); message = "INSPECTING KINGMAKER"; syncHUD() }
     func diagnoseKingmaker() { coordinator.inspect(.engineBay); interaction.focus(DHRev10InteractionCatalog.garage[1]); interaction.diagnose("FAILED COOLING, FUEL, ELECTRICAL; ENGINE SEIZED"); message = interaction.diagnosisText; syncHUD() }
     func repairKingmaker() { for step in repair.steps { while repair.steps.first(where: { $0.id == step.id })?.state != .complete { _ = repair.work(on: step.id, seconds: 4, skill: 5) } }; repair.apply(to: &slice.kingmaker); coordinator.kingmaker = slice.kingmaker; coordinator.repair(); interaction.focus(DHRev10InteractionCatalog.garage[2]); interaction.repairStep(dt: 2); message = "KINGMAKER REPAIRED"; syncHUD() }

@@ -14,7 +14,7 @@ public struct FirstPlayableRuntime:Codable,Sendable,Equatable {
     public mutating func walkToKingmaker(){playerDistanceM=4;world.complete(.spawnGarage);world.complete(.walkToKingmaker)}
     public mutating func openHood(){hoodOpen=true;world.complete(.openHood)}
     public mutating func diagnoseAndRepair(){world.complete(.diagnose);world.complete(.repair)}
-    public mutating func startKingmaker(){kingmakerStarted=true;world.complete(.startEngine)}
+    public mutating func startKingmaker(){guard hoodOpen else{return};kingmakerStarted=true;world.complete(.startEngine)}
     public mutating func openDoor(){garageDoorOpen=true;world.complete(.openGarageDoor)}
     public mutating func enterKingmaker(){guard kingmakerStarted && garageDoorOpen else{return};locomotion = .inVehicle;world.complete(.enterVehicle)}
     public mutating func drive(to distance:Double){guard locomotion == .inVehicle else{return};playerDistanceM=max(playerDistanceM,distance);if distance>=25{world.complete(.driveHighway)};if distance>=75{world.complete(.encounterConvoy);world.complete(.hearRadio)};if distance>=150{reachedParadise=true;world.complete(.reachParadise)}}
