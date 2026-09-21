@@ -49,6 +49,13 @@ public struct VehicleFXState: Codable, Sendable, Equatable { public var dust=0.0
 
 public struct InventorySlot: Codable, Sendable, Equatable, Identifiable { public var id:String; public var name:String; public var quantity:Int; public var massKG:Double; public var value:Int; public init(id:String,name:String,quantity:Int=1,massKG:Double,value:Int){self.id=id;self.name=name;self.quantity=quantity;self.massKG=massKG;self.value=value} }
 public struct TradeState: Codable, Sendable, Equatable { public var playerCaps:Int=40; public var player:[InventorySlot]=[]; public var merchant:[InventorySlot]=[]; public init(){}; public mutating func buy(id:String){guard let i=merchant.firstIndex(where:{$0.id==id}), playerCaps>=merchant[i].value else{return}; let item=merchant.remove(at:i); playerCaps-=item.value; player.append(item)} }
+public extension TradeState {
+    mutating func sell(id: String) {
+        guard let index = player.firstIndex(where: { $0.id == id }) else { return }
+        let item = player.remove(at: index)
+        playerCaps += item.value
+    }
+}
 
 public struct PauseSettingsState: Codable, Sendable, Equatable { public var paused=false; public var masterVolume=0.85; public var musicVolume=0.65; public var radioVolume=0.9; public var cameraSensitivity=1.0; public var haptics=true; public init(){} }
 public struct SaveSlotDescriptor: Codable, Sendable, Equatable, Identifiable { public var id:String; public var title:String; public var timestamp:Date; public var region:String; public var distanceKM:Double; public init(id:String,title:String,timestamp:Date=Date(),region:String,distanceKM:Double){self.id=id;self.title=title;self.timestamp=timestamp;self.region=region;self.distanceKM=distanceKM} }

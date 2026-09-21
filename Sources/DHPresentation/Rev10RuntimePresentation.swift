@@ -22,6 +22,7 @@ public struct DHRev10LootRuntime: Codable, Equatable, Sendable {
     public var containerID: String?
     public var searchedContainers: Set<String> = []
     public var collectedItemIDs: Set<String> = []
+    public init() {}
     public mutating func search(_ containerID: String) -> Bool { guard !searchedContainers.contains(containerID) else { return false }; self.containerID = containerID; searchedContainers.insert(containerID); return true }
     public mutating func collect(_ itemID: String) { collectedItemIDs.insert(itemID) }
 }
@@ -30,6 +31,7 @@ public struct DHRev10ParadiseRuntime: Codable, Equatable, Sendable {
     public var negotiationOpen = false
     public var tradeOpen = false
     public var recruitedNPCID: String?
+    public init() {}
     public mutating func negotiate() { negotiationOpen = true }
     public mutating func trade() { tradeOpen = true }
     public mutating func recruit(_ npcID: String) { recruitedNPCID = npcID }

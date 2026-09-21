@@ -143,6 +143,36 @@ import Testing
     #expect(visual.profile.repairable == false)
 }
 
+@Test func repairRuntimePersistsPartialWorkAndAppliesCompletedSteps() {
+    var repairs = DHRepairRuntime()
+    let firstWork = repairs.work(on: "cooling.radiator", seconds: 2, skill: 1)
+    #expect(firstWork)
+    #expect(repairs.steps.first?.state == .inProgress)
+    let secondWork = repairs.work(on: "cooling.radiator", seconds: 2, skill: 1)
+    #expect(secondWork)
+    #expect(repairs.steps.first?.state == .complete)
+    var vehicle = KingmakerState.derelict()
+    repairs.apply(to: &vehicle)
+    #expect(vehicle.hasViable(.cooling))
+}
+
+@Test func kingmakerCollisionStateDisablesAtSevereImpact() {
+    var collision = KingmakerCollisionState()
+    collision.impact(relativeSpeedMPS: 25, otherMassKG: 700)
+    #expect(collision.impactEnergy > 0)
+    collision.impact(relativeSpeedMPS: 25, otherMassKG: 700)
+    #expect(collision.disabled)
+}
+
+@Test func salvageTradeReturnsValueToPlayer() {
+    var trade = TradeState()
+    trade.playerCaps = 0
+    trade.player = [InventorySlot(id: "scrap", name: "Scrap", massKG: 1, value: 12)]
+    trade.sell(id: "scrap")
+    #expect(trade.player.isEmpty)
+    #expect(trade.playerCaps == 12)
+}
+
 @Test func rev10CoordinatorCoversInspectionRepairStreamingAndRadio() {
     var runtime = DHRev10SliceCoordinator()
     runtime.inspect(.engineBay)

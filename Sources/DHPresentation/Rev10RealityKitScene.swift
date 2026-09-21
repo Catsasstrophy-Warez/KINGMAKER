@@ -110,6 +110,8 @@ public final class DHRev10RealityKitScene {
     public func replaceKingmaker(with entity: Entity) {
         anchors["kingmaker"]?.removeFromParent()
         entity.name = "vehicle.kingmaker.asset"
+        entity.components.set(CollisionComponent(shapes: [ShapeResource.generateBox(size: [4.8, 1.45, 1.95])]))
+        entity.components.set(InputTargetComponent())
         anchors["kingmaker"] = entity
         root.addChild(entity)
     }
@@ -150,6 +152,7 @@ public final class DHRev10RealityKitScene {
     private func marker(name: String, size: Float, height: Float, color: SimpleMaterial.Color = .gray) -> ModelEntity {
         let entity = ModelEntity(mesh: .generateBox(size: [size, height, size]), materials: [SimpleMaterial(color: color, isMetallic: false)])
         entity.name = name
+        entity.components.set(CollisionComponent(shapes: [ShapeResource.generateBox(size: [size, height, size])]))
         return entity
     }
 

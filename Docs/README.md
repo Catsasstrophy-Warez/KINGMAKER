@@ -25,5 +25,6 @@ Each rev builds on the previous one; Rev10 is current (see the top-level
 - [PRODUCTION_CONTENT_HANDOFF.md](PRODUCTION_CONTENT_HANDOFF.md) — explicit boundary between shipped contracts/blockouts and external production inputs
 - [DEVICE_VALIDATION_CHECKLIST.md](DEVICE_VALIDATION_CHECKLIST.md) — Simulator, physical-device, and thermal validation sequence
 - [ROADMAP_1_20.md](ROADMAP_1_20.md) — implementation status for the next twenty roadmap items
+- [ROADMAP_5_30_EXECUTION.md](ROADMAP_5_30_EXECUTION.md) — execution and verification status for steps 5–30
 - [SHA256_MANIFEST.txt](SHA256_MANIFEST.txt) — checksum snapshot from an earlier revision; paths inside it predate this reorganization and are historical only, not a current manifest
 - [`../ResearchLibrary/`](../ResearchLibrary/) — design reference matrices (visual canon, hazard telemetry, parts disassembly, action reference, condition states, settlement/endgame systems)

@@ -30,6 +30,7 @@ public struct BlackridgeFirstPlayableScene: Codable, Sendable, Equatable {
 }
 public struct IsometricCameraRig: Codable, Sendable, Equatable {
     public var mode:CameraMode = .onFootIsometric; public var yawDegrees = 45.0; public var pitchDegrees = -52.0; public var distance = 18.0; public var smoothing = 0.16
+    public init() {}
     public mutating func enterVehicle(){mode = .vehicleChaseIsometric; distance = 24}
     public mutating func inspectGarage(){mode = .garageInspection; distance = 8}
     public mutating func exitVehicle(){mode = .onFootIsometric; distance = 18}
