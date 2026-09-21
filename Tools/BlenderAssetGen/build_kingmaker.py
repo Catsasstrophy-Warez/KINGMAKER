@@ -301,21 +301,33 @@ bevel.segments = 2
 # Target total vehicle height (real GT500 height/wheelbase ~0.508 * this model's 3.21 wheelbase)
 # is ~1.63; with GROUND=0.45 and the body's beltline at local 0.50 (world 0.95), the greenhouse
 # needs to rise to local ~1.18 (world ~1.63), not the previous 1.00 (world 1.45, ~0.18 short).
+# True front/rear orthogonal renders (not just the 3/4 angles checked before) showed the
+# roof_z=1.18 height reached for the real-GT500 height/wheelbase ratio, combined with the
+# greenhouse's half_w=0.80 being much narrower than the body below it (0.90-1.06), made the
+# greenhouse read as an isolated narrow fin/tower rather than an integrated roof -- a real defect
+# the side-view-only checks in the previous pass missed. Widened to fill more of the body width and
+# brought the height down partway back toward the previous pass's 1.00 (a compromise: still taller
+# than 1.00, short of the real-ratio-derived 1.18, chosen because the front/rear silhouette is what
+# visibly broke, and no single number here perfectly satisfies both the side-profile height ratio
+# and the front-view width/height balance on a 4-point cross-section).
 green_sections = [
-    (0.95, 0.78, 0.50, 0.64),    # windshield base
-    (0.45, 0.80, 0.50, 1.18),    # roof front (A-pillar)
-    (-0.90, 0.80, 0.50, 1.18),   # roof rear -- wide flat plateau (0.45 -> -0.90) so the roof
+    (0.95, 0.94, 0.50, 0.58),    # windshield base
+    (0.45, 0.98, 0.50, 0.98),    # roof front (A-pillar)
+    (-0.90, 0.98, 0.50, 0.98),   # roof rear -- wide flat plateau (0.45 -> -0.90) so the roof
                                  # reads as a roof at full-car scale, not a short tent apex
-    (-1.45, 0.84, 0.44, 0.50),   # long, shallow fastback taper into the decklid (x matches the
+    (-1.45, 0.94, 0.44, 0.48),   # long, shallow fastback taper into the decklid (x matches the
                                  # new rear fender-flare position)
 ]
 
 def green_ring(half_w, base_z, roof_z):
-    # a much flatter top than a 0.7-factor trapezoid gives: a real roof panel, not a tent ridge
+    # a much flatter top than a 0.7-factor trapezoid gives: a real roof panel, not a tent ridge.
+    # The side-wall taper factor was 0.92 (roof narrower than base); from a true front/rear
+    # orthogonal render that read as a pyramid/tent silhouette, not an integrated cabin -- nearly
+    # vertical sides (0.98) look like an actual greenhouse box instead.
     return [
         (-half_w, base_z),
-        (-half_w * 0.92, roof_z),
-        (half_w * 0.92, roof_z),
+        (-half_w * 0.98, roof_z),
+        (half_w * 0.98, roof_z),
         (half_w, base_z),
     ]
 
@@ -385,9 +397,10 @@ box("deckLip", (0.22, 1.15, 0.03), chassis_root, MAT_DARK, loc=(-1.95, 0, GROUND
 for side in (-1, 1):
     box(f"headlight_{'L' if side < 0 else 'R'}", (0.06, 0.22, 0.14), chassis_root, MAT_LIGHT,
         loc=(2.55, side * 0.55, GROUND + 0.28))
-    for j, zz in enumerate((-0.05, 0.05)):
-        box(f"taillight_{'L' if side < 0 else 'R'}_{j}", (0.05, 0.10, 0.055), chassis_root, MAT_CALIPER,
-            loc=(-2.35, side * 0.55, GROUND + 0.40 + zz))
+    # Reference (ref_rear.png) shows wide taillight clusters near the trunk's outer corners, not
+    # small central dots -- widened and moved outward to match.
+    box(f"taillight_{'L' if side < 0 else 'R'}", (0.05, 0.22, 0.10), chassis_root, MAT_CALIPER,
+        loc=(-2.35, side * 0.68, GROUND + 0.42))
 
 # grille mesh: horizontal slats set into the opening (parts reference calls out a distinct
 # "grille mesh" sub-assembly, not a painted-over opening); repositioned with grilleOpening above.
@@ -482,11 +495,11 @@ cyl("tachometer", 0.05, 0.02, dashboard, MAT_LIGHT, loc=(0.05, 0.20, 0.05), rot=
 
 # ================= ARMOR (wasteland roof brace/push-bar plating; a roof plate sized to and
 # sitting flush on the greenhouse, whose peak is now GROUND+0.90, not the old GROUND+1.00) =================
-armor = new_empty("armor", parent=chassis_root, loc=(0, 0, GROUND + 1.185))
+armor = new_empty("armor", parent=chassis_root, loc=(0, 0, GROUND + 0.985))
 box("roofBrace", (1.25, 0.58, 0.02), armor, MAT_ARMOR, loc=(-0.20, 0, 0))
 
 # ================= CARGO RACK (roof-mounted, wasteland module; sits just above the roof brace) =================
-cargo = new_empty("cargo", parent=chassis_root, loc=(-0.40, 0, GROUND + 1.205))
+cargo = new_empty("cargo", parent=chassis_root, loc=(-0.40, 0, GROUND + 1.005))
 box("rackBed", (0.70, 0.80, 0.03), cargo, MAT_CARGO, loc=(0, 0, 0))
 for side in (-1, 1):
     cyl("rackRail" + ("L" if side < 0 else "R"), 0.015, 0.70, cargo, MAT_METAL,
