@@ -244,6 +244,17 @@ GROUND = 0.45
 # previous 1.35/-1.75 wheel positions gave only 0.549 -- overhangs both front and rear were much
 # longer than the reference's short-overhang fastback stance. Fender-flare control points moved
 # to track the new wheel-aligned x positions below.
+# The previous pass calibrated wheelbase/length to 0.696 by pixel-reading ref_side.png directly,
+# but that contradicts well-established real Mustang/Shelby GT500 dimensions (the reference car is
+# clearly a modified GT500): wheelbase/length ~0.569, height/wheelbase ~0.508, wheel-diameter/
+# wheelbase ~0.254 (2720mm wheelbase, 4784mm length, 1381mm height, ~691mm wheel diameter). Those
+# are authoritative and not subject to the pixel-measurement noise a ~130px-tall crop has -- the
+# 0.696 reading was the error, not the real-world ratio. Recalibrated against these instead: with
+# this model's 5.65-unit nose-to-tail length, target wheelbase is 0.569*5.65=3.21 (front overhang
+# ~1.11, rear overhang ~1.32, split matching the real car's slightly-larger rear overhang), giving
+# front wheel x=1.75 (barely moved from the previous pass) and rear wheel x=-1.48 (moved back from
+# the previous pass's overcorrected -2.19). Target total height is 0.508*3.21=1.63 (see GROUND and
+# green_sections below for how that's split between the body and the greenhouse).
 body_sections = [
     (2.85, 0.03, 0.26),    # nose tip
     (2.60, 0.62, 0.34),    # front bumper
@@ -252,9 +263,9 @@ body_sections = [
     (1.75, 1.06, 0.46),    # front fender flare (over front wheel, x matches new wheel position)
     (1.00, 0.98, 0.50),    # cowl
     (-0.20, 0.96, 0.50),   # beltline mid / rocker
-    (-2.00, 1.10, 0.46),   # rear fender flare (over rear wheel; widest point -- muscular haunch)
-    (-2.35, 0.90, 0.42),   # decklid
-    (-2.60, 0.82, 0.36),   # rear bumper
+    (-1.45, 1.10, 0.46),   # rear fender flare (over rear wheel; widest point -- muscular haunch)
+    (-1.85, 0.90, 0.42),   # decklid
+    (-2.35, 0.82, 0.36),   # rear bumper
     (-2.80, 0.03, 0.28),   # tail tip
 ]
 
@@ -287,12 +298,16 @@ bevel.segments = 2
 # Pixel-grid measurement against ref_side.png (ground/beltline/roof-peak rows) shows the
 # greenhouse rising roughly as tall as the lower body below the beltline, not a shallow bump --
 # roof_z raised accordingly from the previous pass's 0.84 to ~1.00.
+# Target total vehicle height (real GT500 height/wheelbase ~0.508 * this model's 3.21 wheelbase)
+# is ~1.63; with GROUND=0.45 and the body's beltline at local 0.50 (world 0.95), the greenhouse
+# needs to rise to local ~1.18 (world ~1.63), not the previous 1.00 (world 1.45, ~0.18 short).
 green_sections = [
-    (0.95, 0.78, 0.50, 0.60),    # windshield base
-    (0.45, 0.80, 0.50, 1.00),    # roof front (A-pillar)
-    (-0.90, 0.80, 0.50, 1.00),   # roof rear -- wide flat plateau (0.45 -> -0.90) so the roof
+    (0.95, 0.78, 0.50, 0.64),    # windshield base
+    (0.45, 0.80, 0.50, 1.18),    # roof front (A-pillar)
+    (-0.90, 0.80, 0.50, 1.18),   # roof rear -- wide flat plateau (0.45 -> -0.90) so the roof
                                  # reads as a roof at full-car scale, not a short tent apex
-    (-1.85, 0.84, 0.44, 0.48),   # long, shallow fastback taper into the decklid
+    (-1.45, 0.84, 0.44, 0.50),   # long, shallow fastback taper into the decklid (x matches the
+                                 # new rear fender-flare position)
 ]
 
 def green_ring(half_w, base_z, roof_z):
@@ -413,7 +428,7 @@ box("dctHousing", (0.42, 0.30, 0.30), transmission, MAT_DARK, loc=(0, 0, 0))
 
 # ================= SUSPENSION (wide track matching the flared haunches) =================
 suspension = new_empty("suspension", parent=chassis_root)
-corners = [("FL", 1.75, 0.92), ("FR", 1.75, -0.92), ("RL", -2.19, 0.92), ("RR", -2.19, -0.92)]
+corners = [("FL", 1.75, 0.92), ("FR", 1.75, -0.92), ("RL", -1.48, 0.92), ("RR", -1.48, -0.92)]
 for tag, x, y in corners:
     cyl(f"arm_{tag}", 0.025, 0.5, suspension, MAT_DARK, loc=(x, y * 0.5, GROUND - 0.10), rot=(0, math.radians(90), 0))
     cyl(f"coil_{tag}", 0.065, 0.30, suspension, MAT_METAL, loc=(x, y * 0.86, GROUND + 0.06))
@@ -446,8 +461,8 @@ def make_wheel(name, x, y):
 
 make_wheel("wheel_0_0", 1.75, 0.92)
 make_wheel("wheel_0_1", 1.75, -0.92)
-make_wheel("wheel_1_0", -2.19, 0.92)
-make_wheel("wheel_1_1", -2.19, -0.92)
+make_wheel("wheel_1_0", -1.48, 0.92)
+make_wheel("wheel_1_1", -1.48, -0.92)
 
 # ================= CABIN (inside the greenhouse: roll cage, seats, pedal box) =================
 cabin = new_empty("cabin", parent=chassis_root, loc=(-0.15, 0, GROUND + 0.50))
@@ -467,11 +482,11 @@ cyl("tachometer", 0.05, 0.02, dashboard, MAT_LIGHT, loc=(0.05, 0.20, 0.05), rot=
 
 # ================= ARMOR (wasteland roof brace/push-bar plating; a roof plate sized to and
 # sitting flush on the greenhouse, whose peak is now GROUND+0.90, not the old GROUND+1.00) =================
-armor = new_empty("armor", parent=chassis_root, loc=(0, 0, GROUND + 1.005))
+armor = new_empty("armor", parent=chassis_root, loc=(0, 0, GROUND + 1.185))
 box("roofBrace", (1.25, 0.58, 0.02), armor, MAT_ARMOR, loc=(-0.20, 0, 0))
 
 # ================= CARGO RACK (roof-mounted, wasteland module; sits just above the roof brace) =================
-cargo = new_empty("cargo", parent=chassis_root, loc=(-0.40, 0, GROUND + 1.025))
+cargo = new_empty("cargo", parent=chassis_root, loc=(-0.40, 0, GROUND + 1.205))
 box("rackBed", (0.70, 0.80, 0.03), cargo, MAT_CARGO, loc=(0, 0, 0))
 for side in (-1, 1):
     cyl("rackRail" + ("L" if side < 0 else "R"), 0.015, 0.70, cargo, MAT_METAL,
