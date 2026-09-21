@@ -1,23 +1,91 @@
 import bpy, bmesh, math, os
+import numpy as np
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 
-def make_material(name, rgb, metallic=0.0, roughness=0.5):
+# ---------- procedural textures (no external assets; generated with numpy, saved as PNGs) ----------
+TEX_DIR = "/private/tmp/claude-501/-Users-serendipity-Claudeprojx-KINGMAKER/4ddf6449-8a9b-4968-92c3-06111edf9b3f/scratchpad/textures"
+os.makedirs(TEX_DIR, exist_ok=True)
+rng = np.random.default_rng(13)
+
+def save_texture(name, rgb_fn, size=512):
+    """rgb_fn(x, y) -> (r,g,b) in [0,1] arrays of shape (size,size)."""
+    xs, ys = np.meshgrid(np.linspace(0, 1, size), np.linspace(0, 1, size))
+    r, g, b = rgb_fn(xs, ys)
+    a = np.ones_like(r)
+    pixels = np.dstack([r, g, b, a]).astype(np.float32)
+    img = bpy.data.images.new(name, width=size, height=size, alpha=True)
+    img.pixels = pixels.flatten()
+    path = os.path.join(TEX_DIR, name + ".png")
+    img.filepath_raw = path
+    img.file_format = 'PNG'
+    img.save()
+    return path
+
+def paint_texture(xs, ys):
+    base = np.array([0.58, 0.055, 0.045])
+    noise = rng.normal(0, 0.02, xs.shape)
+    grime = (rng.random(xs.shape) < 0.015) * rng.uniform(-0.12, -0.04, xs.shape)
+    scratch = np.zeros_like(xs)
+    for _ in range(14):
+        cx, cy, ang, length, width = rng.uniform(0, 1), rng.uniform(0, 1), rng.uniform(0, math.pi), rng.uniform(0.05, 0.22), 0.004
+        dx, dy = xs - cx, ys - cy
+        along = dx * math.cos(ang) + dy * math.sin(ang)
+        perp = -dx * math.sin(ang) + dy * math.cos(ang)
+        mask = (np.abs(along) < length) & (np.abs(perp) < width)
+        scratch += mask * 0.14
+    v = base[:, None, None] + noise[None] + grime[None] + scratch[None]
+    v = np.clip(v, 0, 1)
+    return v[0], v[1], v[2]
+
+def metal_texture(xs, ys):
+    brushed = np.sin(xs * 400) * 0.02
+    noise = rng.normal(0, 0.03, xs.shape)
+    rust = (rng.random(xs.shape) < 0.02) * rng.uniform(0.1, 0.3, xs.shape)
+    base = 0.42 + brushed + noise
+    r = np.clip(base + rust * 0.6, 0, 1)
+    g = np.clip(base + rust * 0.3, 0, 1)
+    b = np.clip(base, 0, 1)
+    return r, g, b
+
+def dark_trim_texture(xs, ys):
+    noise = rng.normal(0, 0.015, xs.shape)
+    v = np.clip(0.045 + noise, 0, 0.25)
+    return v, v, v
+
+def rubber_tread_texture(xs, ys):
+    tread = ((xs * 40 + ys * 6).astype(int) % 4 == 0) * 0.05
+    noise = rng.normal(0, 0.006, xs.shape)
+    v = np.clip(0.012 + tread + noise, 0, 0.2)
+    return v, v, v
+
+PATH_PAINT = save_texture("tex_paint", paint_texture, size=512)
+PATH_METAL = save_texture("tex_metal", metal_texture, size=512)
+PATH_DARK = save_texture("tex_dark", dark_trim_texture, size=256)
+PATH_RUBBER = save_texture("tex_rubber", rubber_tread_texture, size=512)
+
+def make_material(name, rgb, metallic=0.0, roughness=0.5, texture_path=None):
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
     bsdf = mat.node_tree.nodes.get("Principled BSDF")
-    bsdf.inputs["Base Color"].default_value = (*rgb, 1.0)
+    if texture_path:
+        img = bpy.data.images.load(texture_path)
+        tex_node = mat.node_tree.nodes.new("ShaderNodeTexImage")
+        tex_node.image = img
+        mat.node_tree.links.new(tex_node.outputs["Color"], bsdf.inputs["Base Color"])
+    else:
+        bsdf.inputs["Base Color"].default_value = (*rgb, 1.0)
     bsdf.inputs["Metallic"].default_value = metallic
     bsdf.inputs["Roughness"].default_value = roughness
     return mat
 
-MAT_BODY = make_material("XR13_Paint", (0.58, 0.06, 0.05), metallic=0.4, roughness=0.35)
+MAT_BODY = make_material("XR13_Paint", (0.58, 0.06, 0.05), metallic=0.4, roughness=0.35, texture_path=PATH_PAINT)
 MAT_GLASSHOUSE = make_material("XR13_Glasshouse", (0.07, 0.09, 0.11), metallic=0.1, roughness=0.2)
-MAT_DARK = make_material("XR13_Dark", (0.045, 0.045, 0.05), metallic=0.2, roughness=0.6)
-MAT_METAL = make_material("XR13_Metal", (0.4, 0.4, 0.43), metallic=0.9, roughness=0.3)
-MAT_RUBBER = make_material("XR13_Rubber", (0.012, 0.012, 0.012), metallic=0.0, roughness=0.85)
+MAT_DARK = make_material("XR13_Dark", (0.045, 0.045, 0.05), metallic=0.2, roughness=0.6, texture_path=PATH_DARK)
+MAT_METAL = make_material("XR13_Metal", (0.4, 0.4, 0.43), metallic=0.9, roughness=0.3, texture_path=PATH_METAL)
+MAT_RUBBER = make_material("XR13_Rubber", (0.012, 0.012, 0.012), metallic=0.0, roughness=0.85, texture_path=PATH_RUBBER)
 MAT_CALIPER = make_material("XR13_Caliper", (0.65, 0.05, 0.05), metallic=0.3, roughness=0.4)
-MAT_ARMOR = make_material("XR13_Armor", (0.22, 0.23, 0.24), metallic=0.6, roughness=0.5)
+MAT_ARMOR = make_material("XR13_Armor", (0.22, 0.23, 0.24), metallic=0.6, roughness=0.5, texture_path=PATH_METAL)
 MAT_CARGO = make_material("XR13_Cargo", (0.3, 0.2, 0.1), metallic=0.1, roughness=0.7)
 MAT_LIGHT = make_material("XR13_Light", (0.9, 0.92, 0.85), metallic=0.0, roughness=0.1)
 
@@ -211,6 +279,22 @@ for side in (-1, 1):
     box(f"taillight_{'L' if side < 0 else 'R'}", (0.06, 0.24, 0.12), chassis_root, MAT_CALIPER,
         loc=(-2.35, side * 0.55, GROUND + 0.40))
 
+# grille mesh: horizontal slats across the front fascia (parts reference calls out a distinct
+# "grille mesh" sub-assembly, not a painted-over opening)
+for i, z in enumerate(np.linspace(-0.05, 0.05, 5)):
+    box(f"grilleSlat_{i}", (0.02, 0.45, 0.012), chassis_root, MAT_DARK,
+        loc=(2.58, 0, GROUND + 0.36 + z))
+
+# door seam lines: thin recessed dark strips on both flanks, marking the door split called out in
+# the parts/disassembly reference (front door and rear quarter panel), instead of one uninterrupted
+# side surface
+for side in (-1, 1):
+    y = side * 0.99
+    box(f"doorSeam_front_{'L' if side < 0 else 'R'}", (0.012, 0.012, 0.34), body_panels, MAT_DARK,
+        loc=(0.55, y, 0.28), rot=(0, 0, 0))
+    box(f"doorSeam_rear_{'L' if side < 0 else 'R'}", (0.012, 0.012, 0.34), body_panels, MAT_DARK,
+        loc=(-0.85, y, 0.28), rot=(0, 0, 0))
+
 # ================= ENGINE BAY (under the hood, ahead of the cowl) =================
 engine_bay = new_empty("engineBay", parent=chassis_root, loc=(1.55, 0, GROUND + 0.06))
 box("engineBlock", (0.55, 0.50, 0.34), engine_bay, MAT_DARK, loc=(0, 0, 0.17))
@@ -277,6 +361,20 @@ box("rackBed", (0.75, 0.85, 0.04), cargo, MAT_CARGO, loc=(0, 0, 0))
 for side in (-1, 1):
     cyl("rackRail" + ("L" if side < 0 else "R"), 0.018, 0.75, cargo, MAT_METAL,
         loc=(0, side * 0.40, 0.06), rot=(math.radians(90), 0, 0))
+
+# ---------- UV unwrap every mesh (smart project) so the image textures above map correctly;
+# the bmesh-built meshes (bodyShell, greenhouse, splitter, diffuser fins) have no UVs at all until
+# this runs, and re-unwrapping the bpy.ops primitives too keeps texel density consistent ----------
+for obj in bpy.data.objects:
+    if obj.type != 'MESH':
+        continue
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.object.select_all(action='DESELECT')
+    obj.select_set(True)
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=0.02)
+    bpy.ops.object.mode_set(mode='OBJECT')
 
 # ---------- export ----------
 out_dir = "/private/tmp/claude-501/-Users-serendipity-Claudeprojx-KINGMAKER/4ddf6449-8a9b-4968-92c3-06111edf9b3f/scratchpad"
