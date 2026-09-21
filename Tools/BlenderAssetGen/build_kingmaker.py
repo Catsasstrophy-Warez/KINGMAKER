@@ -230,24 +230,31 @@ assembly = new_empty("XR13_Assembly")
 chassis_root = new_empty("chassis", parent=assembly)
 
 # ride height: wheel-center height, and chassis floor reference. Must exceed the tire's outer
-# radius (major_radius 0.40 + minor_radius 0.075 = 0.475) or the wheels sink through the ground
-# plane -- caught by measuring proportions against the reference images and checking the numbers.
-GROUND = 0.50
+# radius (major_radius + minor_radius, see the wheel definitions below) or the wheels sink through
+# the ground plane -- caught by measuring proportions against the reference images and checking
+# the numbers. Lowered from 0.50 to 0.45 alongside the wheel-size reduction below (new outer
+# radius 0.36+0.065=0.425, so 0.45 still clears it with a small margin).
+GROUND = 0.45
 
 # ================= BODY SHELL: long hood, wide rear haunches, low fastback beltline =================
 # (x, half_width, top_z) -- top_z is the beltline the greenhouse sits on; the body itself stays
 # low and wide (muscular shoulders), with pronounced flares at both wheel arches.
+# Measured wheelbase/length and overhang/length ratios directly against ref_side.png (front/rear
+# wheel-center columns vs. nose/tail columns): reference wheelbase/length ~0.696, this model's
+# previous 1.35/-1.75 wheel positions gave only 0.549 -- overhangs both front and rear were much
+# longer than the reference's short-overhang fastback stance. Fender-flare control points moved
+# to track the new wheel-aligned x positions below.
 body_sections = [
     (2.85, 0.03, 0.26),    # nose tip
     (2.60, 0.62, 0.34),    # front bumper
     (2.35, 0.90, 0.40),    # headlight line
-    (1.75, 0.97, 0.46),    # long hood
-    (1.35, 1.06, 0.46),    # front fender flare (over front wheel)
-    (0.75, 0.98, 0.50),    # cowl
+    (1.95, 0.97, 0.46),    # long hood
+    (1.75, 1.06, 0.46),    # front fender flare (over front wheel, x matches new wheel position)
+    (1.00, 0.98, 0.50),    # cowl
     (-0.20, 0.96, 0.50),   # beltline mid / rocker
-    (-1.35, 1.10, 0.46),   # rear fender flare (over rear wheel; widest point -- muscular haunch)
-    (-1.95, 0.90, 0.42),   # decklid
-    (-2.35, 0.82, 0.36),   # rear bumper
+    (-2.00, 1.10, 0.46),   # rear fender flare (over rear wheel; widest point -- muscular haunch)
+    (-2.35, 0.90, 0.42),   # decklid
+    (-2.60, 0.82, 0.36),   # rear bumper
     (-2.80, 0.03, 0.28),   # tail tip
 ]
 
@@ -406,7 +413,7 @@ box("dctHousing", (0.42, 0.30, 0.30), transmission, MAT_DARK, loc=(0, 0, 0))
 
 # ================= SUSPENSION (wide track matching the flared haunches) =================
 suspension = new_empty("suspension", parent=chassis_root)
-corners = [("FL", 1.35, 0.92), ("FR", 1.35, -0.92), ("RL", -1.75, 0.92), ("RR", -1.75, -0.92)]
+corners = [("FL", 1.75, 0.92), ("FR", 1.75, -0.92), ("RL", -2.19, 0.92), ("RR", -2.19, -0.92)]
 for tag, x, y in corners:
     cyl(f"arm_{tag}", 0.025, 0.5, suspension, MAT_DARK, loc=(x, y * 0.5, GROUND - 0.10), rot=(0, math.radians(90), 0))
     cyl(f"coil_{tag}", 0.065, 0.30, suspension, MAT_METAL, loc=(x, y * 0.86, GROUND + 0.06))
@@ -417,26 +424,30 @@ wheels = new_empty("wheels", parent=chassis_root)
 def make_wheel(name, x, y):
     grp = new_empty(name, parent=wheels, loc=(x, y, GROUND))
     face_sign = -y / abs(y)  # outward-facing side, so spokes/caliper sit on the visible face
-    # reference shows a low-profile performance tire: big alloy rim, thin sidewall
-    torus(name + "_tire", 0.40, 0.075, grp, MAT_RUBBER, loc=(0, 0, 0), rot=(math.radians(90), 0, 0))
-    torus(name + "_barrel", 0.31, 0.10, grp, MAT_METAL, loc=(0, 0, 0), rot=(math.radians(90), 0, 0))
-    cyl(name + "_hub", 0.075, 0.19, grp, MAT_METAL, loc=(0, 0, 0), rot=(math.radians(90), 0, 0), segs=16, smooth=True)
+    # Measured wheel-diameter/length against ref_side.png: reference ~0.110, this model's
+    # previous 0.40/0.075 tire (outer radius 0.475) gave ~0.168 -- oversized relative to the car.
+    # Scaled down ~10% here (and GROUND alongside it) rather than all the way to the reference
+    # ratio, to keep the "big wheels" character the canon doc calls for while closing most of the
+    # gap.
+    torus(name + "_tire", 0.36, 0.065, grp, MAT_RUBBER, loc=(0, 0, 0), rot=(math.radians(90), 0, 0))
+    torus(name + "_barrel", 0.28, 0.09, grp, MAT_METAL, loc=(0, 0, 0), rot=(math.radians(90), 0, 0))
+    cyl(name + "_hub", 0.068, 0.17, grp, MAT_METAL, loc=(0, 0, 0), rot=(math.radians(90), 0, 0), segs=16, smooth=True)
     # multi-spoke face (5 spokes) on the outward side, instead of a flat blank disc
     for k in range(5):
         ang = k * (2 * math.pi / 5)
-        sx, sz = 0.20 * math.cos(ang), 0.20 * math.sin(ang)
+        sx, sz = 0.18 * math.cos(ang), 0.18 * math.sin(ang)
         # box's long axis (local Z) needs to point radially in the wheel's XZ face plane;
         # rotating about Y by (90deg - ang) maps local +Z to (cos ang, 0, sin ang)
-        box(f"{name}_spoke_{k}", (0.055, 0.025, 0.30), grp, MAT_METAL,
-            loc=(sx, face_sign * 0.095, sz), rot=(0, math.pi / 2 - ang, 0))
-    cyl(name + "_rotor", 0.19, 0.02, grp, MAT_METAL, loc=(0, -face_sign * 0.08, 0), rot=(math.radians(90), 0, 0), segs=24, smooth=True)
-    box(name + "_caliper", (0.10, 0.06, 0.10), grp, MAT_CALIPER, loc=(0.14, -face_sign * 0.14, 0))
+        box(f"{name}_spoke_{k}", (0.05, 0.022, 0.27), grp, MAT_METAL,
+            loc=(sx, face_sign * 0.085, sz), rot=(0, math.pi / 2 - ang, 0))
+    cyl(name + "_rotor", 0.17, 0.018, grp, MAT_METAL, loc=(0, -face_sign * 0.072, 0), rot=(math.radians(90), 0, 0), segs=24, smooth=True)
+    box(name + "_caliper", (0.09, 0.054, 0.09), grp, MAT_CALIPER, loc=(0.126, -face_sign * 0.126, 0))
     return grp
 
-make_wheel("wheel_0_0", 1.35, 0.92)
-make_wheel("wheel_0_1", 1.35, -0.92)
-make_wheel("wheel_1_0", -1.75, 0.92)
-make_wheel("wheel_1_1", -1.75, -0.92)
+make_wheel("wheel_0_0", 1.75, 0.92)
+make_wheel("wheel_0_1", 1.75, -0.92)
+make_wheel("wheel_1_0", -2.19, 0.92)
+make_wheel("wheel_1_1", -2.19, -0.92)
 
 # ================= CABIN (inside the greenhouse: roll cage, seats, pedal box) =================
 cabin = new_empty("cabin", parent=chassis_root, loc=(-0.15, 0, GROUND + 0.50))
