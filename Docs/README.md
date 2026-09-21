@@ -19,6 +19,7 @@ Each rev builds on the previous one; Rev10 is current (see the top-level
 
 ## Other docs
 
+- [SOURCE_MAP.md](SOURCE_MAP.md) — navigation aid for `Sources/`'s larger modules (was written for an earlier file layout and had drifted; refreshed and linked here — it wasn't linked from this index at all before)
 - [KINGMAKER_DEEP_DIVE.md](KINGMAKER_DEEP_DIVE.md) — deep dive on the Kingmaker vehicle system
 - [KINGMAKER_XR13_ASSET_PIPELINE.md](KINGMAKER_XR13_ASSET_PIPELINE.md) — XR-13 asset pipeline notes
 - [PRODUCTION_CONTENT_HANDOFF.md](PRODUCTION_CONTENT_HANDOFF.md) — explicit boundary between shipped contracts/blockouts and external production inputs
