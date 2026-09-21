@@ -23,9 +23,10 @@ def save_texture(name, rgb_fn, size=512):
     return path
 
 def paint_texture(xs, ys):
-    base = np.array([0.58, 0.055, 0.045])
-    noise = rng.normal(0, 0.02, xs.shape)
-    grime = (rng.random(xs.shape) < 0.015) * rng.uniform(-0.12, -0.04, xs.shape)
+    # dark gunmetal, matching ResearchLibrary/ReferenceImages/ref_side.png's restored-config paint
+    base = np.array([0.085, 0.09, 0.10])
+    noise = rng.normal(0, 0.012, xs.shape)
+    grime = (rng.random(xs.shape) < 0.015) * rng.uniform(-0.08, -0.03, xs.shape)
     scratch = np.zeros_like(xs)
     for _ in range(14):
         cx, cy, ang, length, width = rng.uniform(0, 1), rng.uniform(0, 1), rng.uniform(0, math.pi), rng.uniform(0.05, 0.22), 0.004
@@ -64,7 +65,7 @@ PATH_METAL = save_texture("tex_metal", metal_texture, size=512)
 PATH_DARK = save_texture("tex_dark", dark_trim_texture, size=256)
 PATH_RUBBER = save_texture("tex_rubber", rubber_tread_texture, size=512)
 
-def make_material(name, rgb, metallic=0.0, roughness=0.5, texture_path=None):
+def make_material(name, rgb, metallic=0.0, roughness=0.5, texture_path=None, coat=0.0, coat_roughness=0.05):
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
     bsdf = mat.node_tree.nodes.get("Principled BSDF")
@@ -77,15 +78,20 @@ def make_material(name, rgb, metallic=0.0, roughness=0.5, texture_path=None):
         bsdf.inputs["Base Color"].default_value = (*rgb, 1.0)
     bsdf.inputs["Metallic"].default_value = metallic
     bsdf.inputs["Roughness"].default_value = roughness
+    if coat > 0:
+        bsdf.inputs["Coat Weight"].default_value = coat
+        bsdf.inputs["Coat Roughness"].default_value = coat_roughness
     return mat
 
-MAT_BODY = make_material("XR13_Paint", (0.58, 0.06, 0.05), metallic=0.4, roughness=0.35, texture_path=PATH_PAINT)
-MAT_GLASSHOUSE = make_material("XR13_Glasshouse", (0.07, 0.09, 0.11), metallic=0.1, roughness=0.2)
-MAT_DARK = make_material("XR13_Dark", (0.045, 0.045, 0.05), metallic=0.2, roughness=0.6, texture_path=PATH_DARK)
-MAT_METAL = make_material("XR13_Metal", (0.4, 0.4, 0.43), metallic=0.9, roughness=0.3, texture_path=PATH_METAL)
-MAT_RUBBER = make_material("XR13_Rubber", (0.012, 0.012, 0.012), metallic=0.0, roughness=0.85, texture_path=PATH_RUBBER)
-MAT_CALIPER = make_material("XR13_Caliper", (0.65, 0.05, 0.05), metallic=0.3, roughness=0.4)
-MAT_ARMOR = make_material("XR13_Armor", (0.22, 0.23, 0.24), metallic=0.6, roughness=0.5, texture_path=PATH_METAL)
+# dark gunmetal clearcoat paint (matches ref_side.png), real clearcoat via Coat Weight/Roughness
+MAT_BODY = make_material("XR13_Paint", (0.085, 0.09, 0.10), metallic=0.55, roughness=0.28,
+                          texture_path=PATH_PAINT, coat=1.0, coat_roughness=0.04)
+MAT_GLASSHOUSE = make_material("XR13_Glasshouse", (0.02, 0.025, 0.03), metallic=0.0, roughness=0.05, coat=1.0, coat_roughness=0.02)
+MAT_DARK = make_material("XR13_Dark", (0.035, 0.035, 0.04), metallic=0.2, roughness=0.5, texture_path=PATH_DARK)
+MAT_METAL = make_material("XR13_Metal", (0.55, 0.55, 0.58), metallic=0.95, roughness=0.22, texture_path=PATH_METAL)
+MAT_RUBBER = make_material("XR13_Rubber", (0.012, 0.012, 0.012), metallic=0.0, roughness=0.75, texture_path=PATH_RUBBER)
+MAT_CALIPER = make_material("XR13_Caliper", (0.65, 0.05, 0.05), metallic=0.3, roughness=0.35, coat=0.5)
+MAT_ARMOR = make_material("XR13_Armor", (0.22, 0.23, 0.24), metallic=0.6, roughness=0.45, texture_path=PATH_METAL)
 MAT_CARGO = make_material("XR13_Cargo", (0.3, 0.2, 0.1), metallic=0.1, roughness=0.7)
 MAT_LIGHT = make_material("XR13_Light", (0.9, 0.92, 0.85), metallic=0.0, roughness=0.1)
 
@@ -118,19 +124,25 @@ def box(name, size, parent, mat, loc, rot=(0, 0, 0)):
     assign_mat(obj, mat)
     return obj
 
-def cyl(name, radius, depth, parent, mat, loc, rot=(0, 0, 0), segs=16):
+def cyl(name, radius, depth, parent, mat, loc, rot=(0, 0, 0), segs=16, smooth=False):
     bpy.ops.mesh.primitive_cylinder_add(radius=radius, depth=depth, vertices=segs, location=(0, 0, 0))
     obj = bpy.context.active_object
     reparent(obj, name, parent, loc, rot)
     assign_mat(obj, mat)
+    if smooth:
+        for poly in obj.data.polygons:
+            poly.use_smooth = poly.normal.z == 0 or abs(poly.normal.z) < 0.99  # keep flat caps crisp, round the barrel
     return obj
 
-def torus(name, major_r, minor_r, parent, mat, loc, rot=(0, 0, 0)):
+def torus(name, major_r, minor_r, parent, mat, loc, rot=(0, 0, 0), smooth=True):
     bpy.ops.mesh.primitive_torus_add(major_radius=major_r, minor_radius=minor_r,
                                       major_segments=28, minor_segments=10, location=(0, 0, 0))
     obj = bpy.context.active_object
     reparent(obj, name, parent, loc, rot)
     assign_mat(obj, mat)
+    if smooth:
+        for poly in obj.data.polygons:
+            poly.use_smooth = True
     return obj
 
 def wedge(name, verts_2d, x0, x1, parent, mat, mat_pos=(0, 0, 0)):
@@ -159,7 +171,30 @@ def wedge(name, verts_2d, x0, x1, parent, mat, mat_pos=(0, 0, 0)):
     obj.data.materials.append(mat)
     return obj
 
-def loft(name, sections, parent, mat, loc=(0, 0, 0), ring_fn=None):
+def catmull_rom_resample(sections, factor=3):
+    """Smoothly resample a control-point list (each a tuple of floats, same length) along its
+    own index using Catmull-Rom splines per-component, instead of the sharp linear facets a
+    direct loft between few control points produces. Endpoints are clamped (tangent from the
+    single adjacent point) so the nose/tail tips stay put."""
+    pts = np.array(sections, dtype=np.float64)
+    n = len(pts)
+    out = []
+    for i in range(n - 1):
+        p0 = pts[i - 1] if i - 1 >= 0 else pts[i]
+        p1 = pts[i]
+        p2 = pts[i + 1]
+        p3 = pts[i + 2] if i + 2 < n else pts[i + 1]
+        steps = factor if i < n - 2 else factor + 1
+        for s in range(steps):
+            t = s / factor
+            t2, t3 = t * t, t * t * t
+            row = 0.5 * ((2 * p1) + (-p0 + p2) * t
+                         + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2
+                         + (-p0 + 3 * p1 - 3 * p2 + p3) * t3)
+            out.append(tuple(row))
+    return out
+
+def loft(name, sections, parent, mat, loc=(0, 0, 0), ring_fn=None, smooth=False):
     """sections: list of (x, half_w, top_z) or richer tuples consumed by ring_fn."""
     bm2 = bmesh.new()
     ring_verts = []
@@ -185,6 +220,9 @@ def loft(name, sections, parent, mat, loc=(0, 0, 0), ring_fn=None):
     obj.parent = parent
     obj.location = loc
     obj.data.materials.append(mat)
+    if smooth:
+        for poly in obj.data.polygons:
+            poly.use_smooth = True
     return obj
 
 # ---------- assembly hierarchy ----------
@@ -223,7 +261,8 @@ def body_ring(half_w, top_z):
     ]
 
 body_panels = new_empty("bodyPanels", parent=chassis_root, loc=(0, 0, GROUND))
-body_shell = loft("bodyShell", body_sections, body_panels, MAT_BODY, ring_fn=body_ring)
+body_sections_smooth = catmull_rom_resample(body_sections, factor=4)
+body_shell = loft("bodyShell", body_sections_smooth, body_panels, MAT_BODY, ring_fn=body_ring, smooth=True)
 bevel = body_shell.modifiers.new("Bevel", "BEVEL")
 bevel.width = 0.02
 bevel.segments = 2
@@ -252,7 +291,8 @@ def green_ring(half_w, base_z, roof_z):
         (half_w, base_z),
     ]
 
-greenhouse = loft("greenhouse", green_sections, body_panels, MAT_GLASSHOUSE, ring_fn=green_ring)
+green_sections_smooth = catmull_rom_resample(green_sections, factor=4)
+greenhouse = loft("greenhouse", green_sections_smooth, body_panels, MAT_GLASSHOUSE, ring_fn=green_ring, smooth=True)
 
 # hood vents (reference shows low hood vents/scoop, not one tall bulge)
 for side in (-1, 1):
@@ -263,7 +303,7 @@ for side in (-1, 1):
 wedge("frontSplitter",
       [(-0.68, 0.0), (-0.68, 0.03), (0.68, 0.03), (0.68, 0.0)],
       2.55, 2.95, chassis_root, MAT_DARK, mat_pos=(0, 0, GROUND + 0.06))
-cyl("pushBar", 0.03, 1.2, chassis_root, MAT_METAL, loc=(2.70, 0, GROUND + 0.24), rot=(math.radians(90), 0, 0))
+cyl("pushBar", 0.03, 1.2, chassis_root, MAT_METAL, loc=(2.70, 0, GROUND + 0.24), rot=(math.radians(90), 0, 0), smooth=True)
 for side in (-1, 1):
     cyl(f"pushBarUpright_{'L' if side < 0 else 'R'}", 0.025, 0.20, chassis_root, MAT_METAL,
         loc=(2.70, side * 0.58, GROUND + 0.14))
@@ -277,7 +317,7 @@ for i, y in enumerate((-0.55, -0.2, 0.2, 0.55)):
         loc=(-2.55, y, GROUND + 0.12), rot=(0, math.radians(8), 0))
 for side in (-1, 1):
     cyl(f"exhaustTip_{'L' if side < 0 else 'R'}", 0.055, 0.14, chassis_root, MAT_METAL,
-        loc=(-2.70, side * 0.35, GROUND + 0.10), rot=(0, math.radians(90), 0))
+        loc=(-2.70, side * 0.35, GROUND + 0.10), rot=(0, math.radians(90), 0), smooth=True)
 
 # ducktail lip spoiler on the decklid trailing edge (reference: a small integrated lip, not a
 # strut-mounted wing)
@@ -311,7 +351,7 @@ for side in (-1, 1):
 # ================= ENGINE BAY (under the hood, ahead of the cowl) =================
 engine_bay = new_empty("engineBay", parent=chassis_root, loc=(1.55, 0, GROUND + 0.06))
 box("engineBlock", (0.55, 0.50, 0.34), engine_bay, MAT_DARK, loc=(0, 0, 0.17))
-cyl("supercharger", 0.15, 0.28, engine_bay, MAT_METAL, loc=(0, 0, 0.42), rot=(math.radians(90), 0, 0))
+cyl("supercharger", 0.15, 0.28, engine_bay, MAT_METAL, loc=(0, 0, 0.42), rot=(math.radians(90), 0, 0), smooth=True)
 cyl("radiator", 0.30, 0.09, engine_bay, MAT_METAL, loc=(0.42, 0, 0.15), rot=(0, math.radians(90), 0))
 for side in (-1, 1):
     cyl(f"header_{'L' if side < 0 else 'R'}", 0.03, 0.5, engine_bay, MAT_METAL,
@@ -336,11 +376,21 @@ wheels = new_empty("wheels", parent=chassis_root)
 
 def make_wheel(name, x, y):
     grp = new_empty(name, parent=wheels, loc=(x, y, GROUND))
+    face_sign = -y / abs(y)  # outward-facing side, so spokes/caliper sit on the visible face
     # reference shows a low-profile performance tire: big alloy rim, thin sidewall
     torus(name + "_tire", 0.40, 0.075, grp, MAT_RUBBER, loc=(0, 0, 0), rot=(math.radians(90), 0, 0))
-    cyl(name + "_rim", 0.32, 0.21, grp, MAT_METAL, loc=(0, 0, 0), rot=(math.radians(90), 0, 0), segs=12)
-    cyl(name + "_rotor", 0.19, 0.02, grp, MAT_METAL, loc=(0, -y / abs(y) * 0.08, 0), rot=(math.radians(90), 0, 0), segs=20)
-    box(name + "_caliper", (0.10, 0.06, 0.10), grp, MAT_CALIPER, loc=(0.14, -y / abs(y) * 0.14, 0))
+    torus(name + "_barrel", 0.31, 0.10, grp, MAT_METAL, loc=(0, 0, 0), rot=(math.radians(90), 0, 0))
+    cyl(name + "_hub", 0.075, 0.19, grp, MAT_METAL, loc=(0, 0, 0), rot=(math.radians(90), 0, 0), segs=16, smooth=True)
+    # multi-spoke face (5 spokes) on the outward side, instead of a flat blank disc
+    for k in range(5):
+        ang = k * (2 * math.pi / 5)
+        sx, sz = 0.20 * math.cos(ang), 0.20 * math.sin(ang)
+        # box's long axis (local Z) needs to point radially in the wheel's XZ face plane;
+        # rotating about Y by (90deg - ang) maps local +Z to (cos ang, 0, sin ang)
+        box(f"{name}_spoke_{k}", (0.055, 0.025, 0.30), grp, MAT_METAL,
+            loc=(sx, face_sign * 0.095, sz), rot=(0, math.pi / 2 - ang, 0))
+    cyl(name + "_rotor", 0.19, 0.02, grp, MAT_METAL, loc=(0, -face_sign * 0.08, 0), rot=(math.radians(90), 0, 0), segs=24, smooth=True)
+    box(name + "_caliper", (0.10, 0.06, 0.10), grp, MAT_CALIPER, loc=(0.14, -face_sign * 0.14, 0))
     return grp
 
 make_wheel("wheel_0_0", 1.35, 0.92)
