@@ -1,7 +1,5 @@
 # DEAD HIGHWAY (Kingmaker)
 
-[![CI](https://github.com/Catsasstrophy-Warez/KINGMAKER/actions/workflows/ci.yml/badge.svg)](https://github.com/Catsasstrophy-Warez/KINGMAKER/actions/workflows/ci.yml)
-
 A post-apocalyptic survival/driving game for iOS/macOS. You inhabit Blackridge
 County, recover a derelict muscle car (the XR-13 "Kingmaker"), diagnose and
 rebuild it component by component, then drive, scavenge, fight, trade, and
