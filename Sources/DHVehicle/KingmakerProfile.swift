@@ -6,7 +6,7 @@ public struct KingmakerProfile: Codable, Equatable, Sendable {
     public var buildPath: KingmakerBuildPath
     public var fuelType = "gasoline"
     public var engineDisplacementL = 7.0
-    public var transmissionGears = 7
+    public var transmissionGears = 6
     public var armorLevel: Int
     public var cargoCapacity: Double
     public var coolingCapacity: Double

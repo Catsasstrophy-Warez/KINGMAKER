@@ -1,11 +1,24 @@
-import bpy, bmesh, math, os
+import bpy, bmesh, math, os, sys
 import numpy as np
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 
 # ---------- procedural textures (no external assets; generated with numpy, saved as PNGs) ----------
-TEX_DIR = "/private/tmp/claude-501/-Users-serendipity-Claudeprojx-KINGMAKER/4ddf6449-8a9b-4968-92c3-06111edf9b3f/scratchpad/textures"
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, "../.."))
+GENERATED_DIR = os.path.join(SCRIPT_DIR, "generated")
+RESOURCE_DIR = os.path.join(PROJECT_ROOT, "Sources", "DHPresentation", "Resources")
+if "--" in sys.argv:
+    _args = sys.argv[sys.argv.index("--") + 1:]
+    if "--output-dir" in _args:
+        _i = _args.index("--output-dir")
+        if _i + 1 >= len(_args):
+            raise SystemExit("--output-dir requires a path")
+        RESOURCE_DIR = os.path.abspath(_args[_i + 1])
+TEX_DIR = os.path.join(GENERATED_DIR, "textures")
 os.makedirs(TEX_DIR, exist_ok=True)
+os.makedirs(GENERATED_DIR, exist_ok=True)
+os.makedirs(RESOURCE_DIR, exist_ok=True)
 rng = np.random.default_rng(13)
 
 def save_texture(name, rgb_fn, size=512):
@@ -23,7 +36,7 @@ def save_texture(name, rgb_fn, size=512):
     return path
 
 def paint_texture(xs, ys):
-    # dark gunmetal, matching ResearchLibrary/ReferenceImages/ref_side.png's restored-config paint
+    # dark gunmetal, matching the restored-config paint in the canonical reference sheets
     base = np.array([0.085, 0.09, 0.10])
     noise = rng.normal(0, 0.012, xs.shape)
     grime = (rng.random(xs.shape) < 0.015) * rng.uniform(-0.08, -0.03, xs.shape)
@@ -83,7 +96,7 @@ def make_material(name, rgb, metallic=0.0, roughness=0.5, texture_path=None, coa
         bsdf.inputs["Coat Roughness"].default_value = coat_roughness
     return mat
 
-# dark gunmetal clearcoat paint (matches ref_side.png), real clearcoat via Coat Weight/Roughness
+# dark gunmetal clearcoat paint, real clearcoat via Coat Weight/Roughness
 MAT_BODY = make_material("XR13_Paint", (0.085, 0.09, 0.10), metallic=0.55, roughness=0.28,
                           texture_path=PATH_PAINT, coat=1.0, coat_roughness=0.04)
 MAT_GLASSHOUSE = make_material("XR13_Glasshouse", (0.02, 0.025, 0.03), metallic=0.0, roughness=0.05, coat=1.0, coat_roughness=0.02)
@@ -239,12 +252,12 @@ GROUND = 0.45
 # ================= BODY SHELL: long hood, wide rear haunches, low fastback beltline =================
 # (x, half_width, top_z) -- top_z is the beltline the greenhouse sits on; the body itself stays
 # low and wide (muscular shoulders), with pronounced flares at both wheel arches.
-# Measured wheelbase/length and overhang/length ratios directly against ref_side.png (front/rear
+# Measured wheelbase/length and overhang/length ratios directly against the canonical side reference
 # wheel-center columns vs. nose/tail columns): reference wheelbase/length ~0.696, this model's
 # previous 1.35/-1.75 wheel positions gave only 0.549 -- overhangs both front and rear were much
 # longer than the reference's short-overhang fastback stance. Fender-flare control points moved
 # to track the new wheel-aligned x positions below.
-# The previous pass calibrated wheelbase/length to 0.696 by pixel-reading ref_side.png directly,
+# The previous pass calibrated wheelbase/length to 0.696 by pixel-reading the side reference directly,
 # but that contradicts well-established real Mustang/Shelby GT500 dimensions (the reference car is
 # clearly a modified GT500): wheelbase/length ~0.569, height/wheelbase ~0.508, wheel-diameter/
 # wheelbase ~0.254 (2720mm wheelbase, 4784mm length, 1381mm height, ~691mm wheel diameter). Those
@@ -291,11 +304,11 @@ bevel.segments = 2
 # fastback greenhouse: a distinct, narrower volume stepped up from the beltline, roof flowing
 # down into the decklid (the "fastback roof" the visual canon calls for), sitting only over the
 # cabin span so the wide rear haunches remain visible outside it.
-# Reference (ResearchLibrary/ReferenceImages/ref_side.png) shows a much lower, longer,
+# The canonical side reference shows a much lower, longer,
 # more rakish fastback roofline than a first pass gave it -- roof peak lower relative to
 # the body, and the rear glass taper stretched out over a longer run instead of a sharp
 # step down into the decklid.
-# Pixel-grid measurement against ref_side.png (ground/beltline/roof-peak rows) shows the
+# Pixel-grid measurement against the side reference (ground/beltline/roof-peak rows) shows the
 # greenhouse rising roughly as tall as the lower body below the beltline, not a shallow bump --
 # roof_z raised accordingly from the previous pass's 0.84 to ~1.00.
 # Target total vehicle height (real GT500 height/wheelbase ~0.508 * this model's 3.21 wheelbase)
@@ -345,7 +358,7 @@ green_bevel = greenhouse.modifiers.new("Bevel", "BEVEL")
 green_bevel.width = 0.035
 green_bevel.segments = 3
 
-# side mirrors (missing entirely before -- ref_side.png/ref_front.png both show them clearly)
+# side mirrors (missing entirely before -- both canonical orthogonal views show them clearly)
 for side in (-1, 1):
     cyl(f"mirrorStalk_{'L' if side < 0 else 'R'}", 0.012, 0.10, body_panels, MAT_DARK,
         loc=(0.70, side * 0.82, 0.60), rot=(math.radians(20), 0, 0), smooth=True)
@@ -362,6 +375,11 @@ for side in (-1, 1):
 for side in (-1, 1):
     box(f"hoodVent_{'L' if side < 0 else 'R'}", (0.28, 0.14, 0.045), body_panels, MAT_DARK,
         loc=(1.55, side * 0.28, 0.46))
+# ref_front.png/ref_side.png both show a distinct raised hood scoop between the vents, not a flat
+# hood -- a low tapered bulge (wide flat top, sloped sides) reads as a scoop rather than a random
+# box the way a flat vent alone did.
+box("hoodScoopBulge", (0.55, 0.30, 0.055), body_panels, MAT_BODY, loc=(1.55, 0, 0.485))
+box("hoodScoopRamp", (0.30, 0.30, 0.03), body_panels, MAT_BODY, loc=(1.78, 0, 0.475), rot=(0, math.radians(-8), 0))
 
 # front splitter (low aero lip ahead of the bumper) and push bar.
 # The previous span (2.55 -> 2.95) reached the pinched nose tip (body half-width there is only
@@ -391,12 +409,19 @@ box("grilleOpening", (0.10, 0.60, 0.18), chassis_root, MAT_DARK, loc=(2.50, 0, G
 # spread -- both poked out past the actual tapered surface (visible as detached geometry hovering
 # past the tail in a render). Pulled forward to x=-2.40, inside the wider rear-bumper region
 # (body half-width ~0.65-0.82 there), and narrowed to stay inside that footprint.
+# diffuser valance: a recessed dark panel behind the fins so the diffuser reads as an integrated
+# insert (ref_rear.png), not a set of flat slats floating below the bumper with nothing behind them
+box("diffuserValance", (0.44, 0.85, 0.16), chassis_root, MAT_DARK, loc=(-2.42, 0, GROUND + 0.12))
 for i, y in enumerate((-0.50, -0.18, 0.18, 0.50)):
-    box(f"diffuserFin_{i}", (0.4, 0.03, 0.10), chassis_root, MAT_DARK,
-        loc=(-2.40, y, GROUND + 0.12), rot=(0, math.radians(8), 0))
+    box(f"diffuserFin_{i}", (0.42, 0.03, 0.11), chassis_root, MAT_DARK,
+        loc=(-2.38, y, GROUND + 0.12), rot=(0, math.radians(8), 0))
+# exhaust tips: outer chrome ring + darker inner bore for visual depth/roundness, matching
+# ref_rear.png's prominent dual round tips (a single flat-shaded cylinder read as a stub before)
 for side in (-1, 1):
-    cyl(f"exhaustTip_{'L' if side < 0 else 'R'}", 0.055, 0.14, chassis_root, MAT_METAL,
-        loc=(-2.40, side * 0.30, GROUND + 0.10), rot=(0, math.radians(90), 0), smooth=True)
+    cyl(f"exhaustTip_{'L' if side < 0 else 'R'}_outer", 0.07, 0.12, chassis_root, MAT_METAL,
+        loc=(-2.42, side * 0.30, GROUND + 0.10), rot=(0, math.radians(90), 0), smooth=True)
+    cyl(f"exhaustTip_{'L' if side < 0 else 'R'}_bore", 0.05, 0.06, chassis_root, MAT_DARK,
+        loc=(-2.47, side * 0.30, GROUND + 0.10), rot=(0, math.radians(90), 0), smooth=True)
 
 # ducktail lip spoiler on the decklid trailing edge (reference: a small integrated lip, not a
 # strut-mounted wing)
@@ -404,7 +429,7 @@ box("deckLip", (0.22, 1.15, 0.03), chassis_root, MAT_DARK, loc=(-1.95, 0, GROUND
     rot=(0, math.radians(-6), 0))
 
 # Headlights and taillights as actual lamp clusters (rounded lenses in a housing) instead of flat
-# boxes -- ref_front.png/ref_rear.png show round-lensed lamps, and a flat box reads as a
+# boxes -- the canonical orthogonal views show round-lensed lamps, and a flat box reads as a
 # placeholder rather than a light. Measured: at x=2.55 the body's top surface reaches only
 # ~GROUND+0.356 (world 0.856 with GROUND=0.50); embedding the housing there keeps it flush.
 for side in (-1, 1):
@@ -413,16 +438,16 @@ for side in (-1, 1):
     for k, zz in enumerate((-0.05, 0.05)):
         cyl(f"headlight_lens_{'L' if side < 0 else 'R'}_{k}", 0.045, 0.03, chassis_root, MAT_LIGHT,
             loc=(2.58, side * 0.55, GROUND + 0.28 + zz), rot=(0, math.radians(90), 0), smooth=True)
-    # ref_rear.png shows quad round lamp elements per side inside a wide housing, not a flat block.
+    # The rear reference shows quad round lamp elements per side inside a wide housing, not a flat block.
     box(f"taillight_housing_{'L' if side < 0 else 'R'}", (0.04, 0.22, 0.11), chassis_root, MAT_DARK,
         loc=(-2.34, side * 0.68, GROUND + 0.42))
-    # 2x2 grid (not a single vertical stack) to match ref_rear.png's quad-lamp cluster shape
+    # 2x2 grid (not a single vertical stack) to match the quad-lamp cluster shape
     for k, (yy, zz) in enumerate([(-0.06, -0.028), (0.06, -0.028), (-0.06, 0.028), (0.06, 0.028)]):
         cyl(f"taillight_lens_{'L' if side < 0 else 'R'}_{k}", 0.026, 0.025, chassis_root, MAT_CALIPER,
             loc=(-2.38, side * 0.68 + yy, GROUND + 0.42 + zz), rot=(0, math.radians(90), 0), smooth=True)
 
 # grille mesh: a real crossed grid (horizontal + vertical bars) set into the opening, not just
-# horizontal slats -- ref_front.png's grille clearly reads as a woven/crossed mesh pattern, not
+# horizontal slats -- the front reference clearly reads as a woven/crossed mesh pattern, not
 # louvers.
 for i, z in enumerate(np.linspace(-0.07, 0.07, 6)):
     box(f"grilleSlat_{i}", (0.02, 0.52, 0.012), chassis_root, MAT_DARK,
@@ -475,22 +500,24 @@ wheels = new_empty("wheels", parent=chassis_root)
 def make_wheel(name, x, y):
     grp = new_empty(name, parent=wheels, loc=(x, y, GROUND))
     face_sign = -y / abs(y)  # outward-facing side, so spokes/caliper sit on the visible face
-    # Measured wheel-diameter/length against ref_side.png: reference ~0.110, this model's
+# Measured wheel-diameter/length against the side reference: reference ~0.110, this model's
     # previous 0.40/0.075 tire (outer radius 0.475) gave ~0.168 -- oversized relative to the car.
     # Scaled down ~10% here (and GROUND alongside it) rather than all the way to the reference
     # ratio, to keep the "big wheels" character the canon doc calls for while closing most of the
     # gap.
     torus(name + "_tire", 0.36, 0.065, grp, MAT_RUBBER, loc=(0, 0, 0), rot=(math.radians(90), 0, 0))
     torus(name + "_barrel", 0.28, 0.09, grp, MAT_METAL, loc=(0, 0, 0), rot=(math.radians(90), 0, 0))
-    cyl(name + "_hub", 0.068, 0.17, grp, MAT_METAL, loc=(0, 0, 0), rot=(math.radians(90), 0, 0), segs=16, smooth=True)
-    # multi-spoke face (5 spokes) on the outward side, instead of a flat blank disc
+    cyl(name + "_hub", 0.068, 0.17, grp, MAT_METAL, loc=(0, face_sign * 0.03, 0), rot=(math.radians(90), 0, 0), segs=16, smooth=True)
+    # multi-spoke face (5 spokes) on the outward side, instead of a flat blank disc. Pushed
+    # further toward the outer face (0.085 -> 0.125) than before for a deeper-dish look closer to
+    # ref_side.png's wheels, rather than sitting flush with the barrel's centerline.
     for k in range(5):
         ang = k * (2 * math.pi / 5)
         sx, sz = 0.18 * math.cos(ang), 0.18 * math.sin(ang)
         # box's long axis (local Z) needs to point radially in the wheel's XZ face plane;
         # rotating about Y by (90deg - ang) maps local +Z to (cos ang, 0, sin ang)
         box(f"{name}_spoke_{k}", (0.05, 0.022, 0.27), grp, MAT_METAL,
-            loc=(sx, face_sign * 0.085, sz), rot=(0, math.pi / 2 - ang, 0))
+            loc=(sx, face_sign * 0.125, sz), rot=(0, math.pi / 2 - ang, 0))
     cyl(name + "_rotor", 0.17, 0.018, grp, MAT_METAL, loc=(0, -face_sign * 0.072, 0), rot=(math.radians(90), 0, 0), segs=24, smooth=True)
     box(name + "_caliper", (0.09, 0.054, 0.09), grp, MAT_CALIPER, loc=(0.126, -face_sign * 0.126, 0))
     return grp
@@ -543,12 +570,10 @@ for obj in bpy.data.objects:
     bpy.ops.object.mode_set(mode='OBJECT')
 
 # ---------- export ----------
-out_dir = "/private/tmp/claude-501/-Users-serendipity-Claudeprojx-KINGMAKER/4ddf6449-8a9b-4968-92c3-06111edf9b3f/scratchpad"
-os.makedirs(out_dir, exist_ok=True)
-blend_path = os.path.join(out_dir, "Kingmaker_XR13.blend")
+blend_path = os.path.join(GENERATED_DIR, "Kingmaker_XR13.blend")
 bpy.ops.wm.save_as_mainfile(filepath=blend_path)
 
-usdz_path = os.path.join(out_dir, "Kingmaker_XR13.usdz")
+usdz_path = os.path.join(RESOURCE_DIR, "Kingmaker_XR13.usdz")
 bpy.ops.wm.usd_export(
     filepath=usdz_path,
     selected_objects_only=False,

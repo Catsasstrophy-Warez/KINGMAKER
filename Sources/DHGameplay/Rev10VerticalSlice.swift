@@ -19,13 +19,24 @@ public struct DHRev10VerticalSlice: Codable, Sendable, Equatable {
         visualHierarchy = KingmakerVisualHierarchy.production(componentIDs: kingmaker.components.map { $0.id.uuidString })
         county.chunks.forEach { streamer.register($0) }
     }
+    public mutating func repairKingmaker() {
+        repairedComponentIDs = Set(kingmaker.components.map { $0.id.uuidString })
+        kingmaker.components = kingmaker.components.map { var c = $0; c.condition = .serviceable; return c }
+    }
+    public mutating func prepareKingmakerForStart() {
+        repairKingmaker()
+        kingmaker.fuelLiters = max(kingmaker.fuelLiters, 12)
+        kingmaker.fuelPressureKPa = max(kingmaker.fuelPressureKPa, 350)
+        kingmaker.batterySOC = max(kingmaker.batterySOC, 0.92)
+        _ = kingmaker.crank(seconds: 1)
+    }
     public mutating func advance(to next: DHRev10Beat) -> Bool {
         let allowed: [DHRev10Beat: Set<DHRev10Beat>] = [.garage: [.inspect], .inspect: [.diagnose], .diagnose: [.scavenge], .scavenge: [.repair], .repair: [.start], .start: [.drive], .drive: [.hostileEncounter], .hostileEncounter: [.radioConsequence], .radioConsequence: [.paradise], .paradise: [.negotiate], .negotiate: [.recruit], .recruit: [.save], .save: [.reload]]
         guard allowed[beat]?.contains(next) == true else { return false }
         beat = next
         if next == .scavenge { scavengeLoot = ["radiator hose", "12V battery", "fuel filter"] }
-        if next == .repair { repairedComponentIDs = Set(kingmaker.components.filter { $0.condition == .failed }.map { $0.id.uuidString }) }
-        if next == .start { kingmaker.fuelLiters = 12; kingmaker.fuelPressureKPa = 350; kingmaker.batterySOC = 0.92; kingmaker.components = kingmaker.components.map { var c = $0; if repairedComponentIDs.contains(c.id.uuidString) { c.condition = .serviceable }; return c }; _ = kingmaker.crank(seconds: 1) }
+        if next == .repair { repairKingmaker() }
+        if next == .start { prepareKingmakerForStart() }
         if next == .drive { streamer.activate(center: "garage", neighbors: ["northApproach", "southFields"]) }
         if next == .recruit { recruitedNPCID = "paradise-mechanic" }
         if next == .hostileEncounter { hostileEncounterResolved = true }
@@ -33,6 +44,6 @@ public struct DHRev10VerticalSlice: Codable, Sendable, Equatable {
         if next == .reload { beat = .reload }
         return true
     }
-    public func encodedSave() throws -> Data { try JSONEncoder().encode(self) }
-    public static func decodeSave(_ data: Data) throws -> Self { try JSONDecoder().decode(Self.self, from: data) }
+    public func encodedSave() throws -> Data { try DHRev10SaveDocument(slice: self).encoded() }
+    public static func decodeSave(_ data: Data) throws -> Self { try DHRev10SaveDocument.decoded(data) }
 }

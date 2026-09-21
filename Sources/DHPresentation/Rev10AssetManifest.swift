@@ -31,3 +31,14 @@ public enum DHRev10AssetManifest {
     ]
     public static func bindings(for kind: DHRev10AssetKind) -> [DHRev10AssetBinding] { bindings.filter { $0.kind == kind } }
 }
+
+public enum DHRev10AssetResolver {
+    public static func url(for binding: DHRev10AssetBinding) -> URL? {
+        Bundle.module.url(forResource: binding.sourceName.replacingOccurrences(of: ".usdz", with: ""), withExtension: "usdz")
+            ?? Bundle.module.url(forResource: binding.sourceName, withExtension: nil)
+    }
+
+    public static var missingRequiredBindings: [DHRev10AssetBinding] {
+        DHRev10AssetManifest.bindings.filter { $0.required && url(for: $0) == nil }
+    }
+}

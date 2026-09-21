@@ -18,6 +18,7 @@ func viable(_ s:KingmakerSystem)->VehicleComponent{.init(id:UUID(),name:s.rawVal
 @Test func drivetrainAcceleratesWithinGripLimit() { var d=DrivetrainState(); d.step(throttle:1,grip:1,dt:1); #expect(d.speedMPS > 0) }
 @Test func collisionEnergyCreatesDamage() { let r=CollisionSolver.impact(massKg:1850,speedMPS:30,angleCos:1); #expect(r.energyJ > 800000); #expect(r.suspensionDamage > 0) }
 @Test func deterministicEncounterGeneration() { var a=SeededGenerator(seed:42); var b=SeededGenerator(seed:42); #expect(EncounterGenerator.generate(rng:&a,x:0,y:0).kind == EncounterGenerator.generate(rng:&b,x:0,y:0).kind) }
+@Test func deterministicEncounterGenerationIncludesStableID() { var a=SeededGenerator(seed:42); var b=SeededGenerator(seed:42); #expect(EncounterGenerator.generate(rng:&a,x:4,y:8) == EncounterGenerator.generate(rng:&b,x:4,y:8)) }
 @Test func electricalTopologyHasStarterPath(){ let t=ElectricalTopology.kingmaker(); #expect(t.nodes.count==6); #expect(t.starterPathResistance() > 0.05) }
 @Test func coolingLeakConsumesFluid(){ var f=KingmakerFluidNetworks.cooling(); f.edges[0].leakRate=0.5; let before=f.nodes[0].quantity; f.step(2); #expect(f.nodes[0].quantity < before) }
 @Test func transmissionHasSixForwardGears(){ let t=TransmissionState(); #expect(t.ratios.count==6); #expect(t.activeRatio() > 10) }

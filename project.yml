@@ -19,6 +19,8 @@ targets:
         product: DHGameplay
       - package: DeadHighwayCore
         product: DHVehicle
+      - package: DeadHighwayCore
+        product: DHWorld
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.deadhighway.game

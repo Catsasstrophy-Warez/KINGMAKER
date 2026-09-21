@@ -4,7 +4,7 @@ The original DEAD HIGHWAY design is now represented by executable data and prese
 
 Implemented in the repository:
 
-- 12-region production atlas, seven factions, and five vehicle archetypes.
+- 12-region production atlas, eight factions, and five vehicle archetypes.
 - Blackridge authored-location manifest, roads, chunks, interiors, encounters, and blockout props.
 - Kingmaker simulation and render hierarchy mapping.
 - Player, inspection, diagnosis, repair, startup, driving, loot, combat, radio, negotiation, recruitment, and persistence contracts.

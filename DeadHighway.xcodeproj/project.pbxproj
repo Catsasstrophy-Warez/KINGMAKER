@@ -11,6 +11,7 @@
 		0C2CBF00417C4D05741CC0CB /* DHPresentation in Frameworks */ = {isa = PBXBuildFile; productRef = 91DAE125B1A8CB187312C7A9 /* DHPresentation */; };
 		4814AE7F2A90E55DD1B47894 /* GameRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98C7D67E4D4764BCA677B400 /* GameRootView.swift */; };
 		4F5F80CBEFA2BDA23798BD9B /* DHVehicle in Frameworks */ = {isa = PBXBuildFile; productRef = A4F063DDBD02BC4920410DF5 /* DHVehicle */; };
+		AF8874880591D327B7A62822 /* DHWorld in Frameworks */ = {isa = PBXBuildFile; productRef = 9F42BDDDD2178475E4927199 /* DHWorld */; };
 		D9477109AD82775E3A93541A /* DHGameplay in Frameworks */ = {isa = PBXBuildFile; productRef = 1004A425E5670A9DAE28D38D /* DHGameplay */; };
 /* End PBXBuildFile section */
 
@@ -29,6 +30,7 @@
 				0C2CBF00417C4D05741CC0CB /* DHPresentation in Frameworks */,
 				D9477109AD82775E3A93541A /* DHGameplay in Frameworks */,
 				4F5F80CBEFA2BDA23798BD9B /* DHVehicle in Frameworks */,
+				AF8874880591D327B7A62822 /* DHWorld in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -89,6 +91,7 @@
 				91DAE125B1A8CB187312C7A9 /* DHPresentation */,
 				1004A425E5670A9DAE28D38D /* DHGameplay */,
 				A4F063DDBD02BC4920410DF5 /* DHVehicle */,
+				9F42BDDDD2178475E4927199 /* DHWorld */,
 			);
 			productName = DeadHighway;
 			productReference = 76EF1D94EB6F99A94A602CAD /* DeadHighway.app */;
@@ -341,6 +344,10 @@
 		91DAE125B1A8CB187312C7A9 /* DHPresentation */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = DHPresentation;
+		};
+		9F42BDDDD2178475E4927199 /* DHWorld */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = DHWorld;
 		};
 		A4F063DDBD02BC4920410DF5 /* DHVehicle */ = {
 			isa = XCSwiftPackageProductDependency;

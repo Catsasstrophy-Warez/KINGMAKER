@@ -17,16 +17,17 @@ start it, drive streamed Blackridge, resolve a hostile vehicle encounter,
 hear its radio consequence, reach Paradise, enter, negotiate/trade/recruit,
 save, quit, reload, and verify persisted state is identical.
 
-Implemented: a 12-region production atlas, seven factions, five vehicle
-archetypes, the Blackridge authored-location manifest (roads, chunks,
-interiors, encounters), the Kingmaker simulation/render hierarchy, and the
-gameplay/persistence contracts for the acceptance path above, plus a
-non-signing Xcode/RealityKit bridge for local Simulator and Mac builds.
+Implemented: a 12-region production atlas, eight registry factions, five
+vehicle archetypes, the Blackridge authored-location manifest (roads, chunks,
+interiors, encounters), the Kingmaker simulation/render hierarchy, a bundled
+procedural textured USDZ blockout, and the gameplay/persistence contracts for
+the acceptance path above. The app now resolves the bundled Kingmaker asset
+with diagnostic marker fallback.
 
-Not yet done (external production inputs): final USDZ/RealityKit meshes and
-materials, authored navmesh resources and animation clips, voice/music/SFX,
-VFX (atmosphere, dust, weather, deformation), the production NPC/vehicle
-roster, and any physical-device signing or validation.
+Not yet done (external production inputs): final authored USDZ/RealityKit
+meshes and materials, authored navmesh resources and animation clips,
+voice/music/SFX, VFX (atmosphere, dust, weather, deformation), the production
+NPC/vehicle roster, and physical-device signing or validation.
 
 See [`Docs/REV10_PRODUCTION_GAP_AUDIT.md`](Docs/REV10_PRODUCTION_GAP_AUDIT.md)
 for the full gap audit, and [`Docs/README.md`](Docs/README.md) for the

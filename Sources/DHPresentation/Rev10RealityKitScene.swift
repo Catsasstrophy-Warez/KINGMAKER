@@ -107,6 +107,12 @@ public final class DHRev10RealityKitScene {
     }
 
     public func entity(for stableID: String) -> Entity? { anchors[stableID] }
+    public func replaceKingmaker(with entity: Entity) {
+        anchors["kingmaker"]?.removeFromParent()
+        entity.name = "vehicle.kingmaker.asset"
+        anchors["kingmaker"] = entity
+        root.addChild(entity)
+    }
     public func setInterior(_ chunkID: String, visible: Bool) { anchors[chunkID]?.isEnabled = visible }
     public func attach(_ entity: Entity, stableID: String) { anchors[stableID] = entity; root.addChild(entity) }
 

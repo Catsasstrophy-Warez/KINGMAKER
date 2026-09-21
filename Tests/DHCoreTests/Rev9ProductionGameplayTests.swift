@@ -72,10 +72,25 @@ import Testing
     for beat in [DHRev10Beat.inspect, .diagnose, .scavenge, .repair, .start, .drive, .hostileEncounter, .radioConsequence, .paradise, .negotiate, .recruit, .save] {
         _ = slice.advance(to: beat)
     }
-    let reloaded = try DHRev10VerticalSlice.decodeSave(try slice.encodedSave())
+    let reloaded = try DHRev10SaveDocument.decoded(try DHRev10SaveDocument(slice: slice).encoded())
     #expect(reloaded == slice)
     #expect(reloaded.recruitedNPCID == "paradise-mechanic")
     #expect(reloaded.scavengeLoot.count == 3)
+}
+
+@Test func rev10SaveReaderAcceptsLegacyDirectSlice() throws {
+    let slice = DHRev10VerticalSlice()
+    let legacyData = try JSONEncoder().encode(slice)
+    #expect(try DHRev10SaveDocument.decoded(legacyData) == slice)
+}
+
+@Test func rev10RepairAndStartChangesAuthoritativeVehicleState() {
+    var slice = DHRev10VerticalSlice()
+    #expect(!slice.kingmaker.engineRunning)
+    slice.repairKingmaker()
+    slice.prepareKingmakerForStart()
+    #expect(slice.kingmaker.engineRunning)
+    #expect(slice.kingmaker.canStart)
 }
 
 @Test func rev10OnFootPresentationSupportsNavigationToInteractionToCombat() {
@@ -128,6 +143,12 @@ import Testing
     #expect(DHRev10AssetManifest.bindings.contains { $0.kind == .audio && $0.sourceName.contains("Radio") })
 }
 
+@Test func rev10BundledKingmakerAssetResolves() {
+    let binding = DHRev10AssetManifest.bindings.first { $0.id == "kingmaker.mesh" }!
+    #expect(DHRev10AssetResolver.url(for: binding) != nil)
+    #expect(DHRev10AssetResolver.missingRequiredBindings.contains { $0.id == "kingmaker.mesh" } == false)
+}
+
 @Test func rev10ProductionContractsCoverRenderingNavigationAndAudio() {
     var budget = DHRev10RenderBudget()
     budget.reduceForThermals()
@@ -160,7 +181,7 @@ import Testing
 
 @Test func productionRegistryCoversOriginalDesignAtlas() {
     #expect(DHProductionContentRegistry.regions.count == 12)
-    #expect(DHProductionContentRegistry.factions.count == 7)
+    #expect(DHProductionContentRegistry.factions.count == Faction.allCases.count)
     #expect(DHProductionContentRegistry.vehicles.contains { $0.id == "xr13" && $0.componentProfile == "kingmaker-254" })
     #expect(DHProductionContentRegistry.regions.contains { $0.id == "lastHighway" })
 }
@@ -179,7 +200,7 @@ import Testing
     let profile = KingmakerProfile(buildPath: .armoredPursuit)
     #expect(profile.identity == "Blackridge XR-13 Kingmaker")
     #expect(profile.componentCount == 254)
-    #expect(profile.transmissionGears == 7)
+    #expect(profile.transmissionGears == 6)
     #expect(profile.hazardousEnvironmentRating == 2)
     #expect(profile.cargoCapacity > 40)
 }

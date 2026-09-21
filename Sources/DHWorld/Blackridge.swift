@@ -1,6 +1,6 @@
 import Foundation
 import DHCore
-public enum BlackridgeSite: String, Codable, CaseIterable, Sendable { case kingmakerGarage, truckStop, scrapyard, interstate, ruinedTown, mineComplex, railYard, fuelDepot, quarry, forestRoads, farms, substation }
+public enum BlackridgeSite: String, Codable, CaseIterable, Sendable { case kingmakerGarage, truckStop, scrapyard, interstate, ruinedTown, mineComplex, railYard, fuelDepot, quarry, forestRoads, farms, substation, paradise }
 public enum Faction:String,Codable,CaseIterable,Sendable { case highwayPatrol, refineryHouses, railUnion, motorTribes, restorationists, childrenOfBurn, homesteads, combine }
 public struct SettlementEconomy: Codable, Sendable, Equatable { public var food:Double; public var water:Double; public var fuel:Double; public var medicine:Double; public var ammunition:Double; public var machinery:Double; public var electricity:Double; public mutating func tick(){ food=max(0,food-0.01); water=max(0,water-0.015); electricity=max(0,electricity-0.005) } }
 public struct WorldCell:Identifiable,Codable,Sendable,Equatable { public let id:EntityID; public var x:Int; public var y:Int; public var loaded:Bool; public var sites:Set<BlackridgeSite> }
