@@ -338,6 +338,19 @@ def green_ring(half_w, base_z, roof_z):
 # open air above the actual roof. Linear sections avoid the overshoot; smooth shading alone still
 # softens the faceting.
 greenhouse = loft("greenhouse", green_sections, body_panels, MAT_GLASSHOUSE, ring_fn=green_ring, smooth=True)
+# soften the hard step where the greenhouse meets the body -- a bevel alone can't blend two
+# separate lofted objects into one continuous surface (that needs unified geometry, out of scope
+# for this blockout), but it rounds the seam edge instead of leaving it a sharp right angle.
+green_bevel = greenhouse.modifiers.new("Bevel", "BEVEL")
+green_bevel.width = 0.035
+green_bevel.segments = 3
+
+# side mirrors (missing entirely before -- ref_side.png/ref_front.png both show them clearly)
+for side in (-1, 1):
+    cyl(f"mirrorStalk_{'L' if side < 0 else 'R'}", 0.012, 0.10, body_panels, MAT_DARK,
+        loc=(0.70, side * 0.82, 0.60), rot=(math.radians(20), 0, 0), smooth=True)
+    box(f"mirrorHousing_{'L' if side < 0 else 'R'}", (0.14, 0.06, 0.05), body_panels, MAT_DARK,
+        loc=(0.70, side * 0.90, 0.66))
 
 # hood vents (reference shows low hood vents/scoop, not one tall bulge).
 # Bug: this is parented to body_panels, which already translates by (0,0,GROUND) -- using
@@ -390,23 +403,33 @@ for side in (-1, 1):
 box("deckLip", (0.22, 1.15, 0.03), chassis_root, MAT_DARK, loc=(-1.95, 0, GROUND + 0.475),
     rot=(0, math.radians(-6), 0))
 
-# headlights and quad taillights (reference: two round-ish lamps per side, not one block).
-# Measured: at x=2.55 the body's top surface reaches only ~GROUND+0.356 (world 0.856 with
-# GROUND=0.50); GROUND+0.36 put the box mostly above that surface (visible as a detached white
-# wedge floating over the fender). Lowered to embed it within the body height instead.
+# Headlights and taillights as actual lamp clusters (rounded lenses in a housing) instead of flat
+# boxes -- ref_front.png/ref_rear.png show round-lensed lamps, and a flat box reads as a
+# placeholder rather than a light. Measured: at x=2.55 the body's top surface reaches only
+# ~GROUND+0.356 (world 0.856 with GROUND=0.50); embedding the housing there keeps it flush.
 for side in (-1, 1):
-    box(f"headlight_{'L' if side < 0 else 'R'}", (0.06, 0.22, 0.14), chassis_root, MAT_LIGHT,
-        loc=(2.55, side * 0.55, GROUND + 0.28))
-    # Reference (ref_rear.png) shows wide taillight clusters near the trunk's outer corners, not
-    # small central dots -- widened and moved outward to match.
-    box(f"taillight_{'L' if side < 0 else 'R'}", (0.05, 0.22, 0.10), chassis_root, MAT_CALIPER,
-        loc=(-2.35, side * 0.68, GROUND + 0.42))
+    box(f"headlight_housing_{'L' if side < 0 else 'R'}", (0.05, 0.24, 0.15), chassis_root, MAT_DARK,
+        loc=(2.53, side * 0.55, GROUND + 0.28))
+    for k, zz in enumerate((-0.05, 0.05)):
+        cyl(f"headlight_lens_{'L' if side < 0 else 'R'}_{k}", 0.045, 0.03, chassis_root, MAT_LIGHT,
+            loc=(2.58, side * 0.55, GROUND + 0.28 + zz), rot=(0, math.radians(90), 0), smooth=True)
+    # ref_rear.png shows quad round lamp elements per side inside a wide housing, not a flat block.
+    box(f"taillight_housing_{'L' if side < 0 else 'R'}", (0.04, 0.22, 0.11), chassis_root, MAT_DARK,
+        loc=(-2.34, side * 0.68, GROUND + 0.42))
+    # 2x2 grid (not a single vertical stack) to match ref_rear.png's quad-lamp cluster shape
+    for k, (yy, zz) in enumerate([(-0.06, -0.028), (0.06, -0.028), (-0.06, 0.028), (0.06, 0.028)]):
+        cyl(f"taillight_lens_{'L' if side < 0 else 'R'}_{k}", 0.026, 0.025, chassis_root, MAT_CALIPER,
+            loc=(-2.38, side * 0.68 + yy, GROUND + 0.42 + zz), rot=(0, math.radians(90), 0), smooth=True)
 
-# grille mesh: horizontal slats set into the opening (parts reference calls out a distinct
-# "grille mesh" sub-assembly, not a painted-over opening); repositioned with grilleOpening above.
+# grille mesh: a real crossed grid (horizontal + vertical bars) set into the opening, not just
+# horizontal slats -- ref_front.png's grille clearly reads as a woven/crossed mesh pattern, not
+# louvers.
 for i, z in enumerate(np.linspace(-0.07, 0.07, 6)):
     box(f"grilleSlat_{i}", (0.02, 0.52, 0.012), chassis_root, MAT_DARK,
         loc=(2.46, 0, GROUND + 0.20 + z))
+for i, y in enumerate(np.linspace(-0.42, 0.42, 9)):
+    box(f"grilleUpright_{i}", (0.018, 0.012, 0.16), chassis_root, MAT_DARK,
+        loc=(2.465, y, GROUND + 0.20))
 
 # door seam lines: thin recessed dark strips on both flanks, marking the door split called out in
 # the parts/disassembly reference (front door and rear quarter panel), instead of one uninterrupted
