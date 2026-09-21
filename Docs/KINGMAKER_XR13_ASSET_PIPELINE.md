@@ -2,6 +2,10 @@
 
 This is the production handoff for the RealityKit assembly. The runtime deliberately expects an assembly, not one monolithic car mesh.
 
+## Current status
+
+A procedural **blockout** USDZ exists at `Sources/DHPresentation/Resources/Kingmaker_XR13.usdz` (bundled via `Package.swift`'s `DHPresentation` target resources). It is primitive geometry only — no final meshes, materials, or textures — but it follows the `XR13_Assembly` hierarchy below with proportions matched to the runtime marker geometry in `Rev10RealityKitScene.swift`. It exists so the RealityKit bridge can load a real asset file instead of code-generated marker entities while final art is produced. Replacing it with production meshes (below) should not require any simulation or bridge changes, by design.
+
 ## Required entity hierarchy
 
 `XR13_Assembly` → `chassis` → `bodyPanels`, `engineBay`, `powertrain`, `transmission`, `suspension`, `wheels`, `cabin`, `dashboard`, `armor`, `cargo`. The stable IDs are defined by `DHRev10AssetManifest` and the RealityKit scene bridge.
