@@ -229,7 +229,10 @@ def loft(name, sections, parent, mat, loc=(0, 0, 0), ring_fn=None, smooth=False)
 assembly = new_empty("XR13_Assembly")
 chassis_root = new_empty("chassis", parent=assembly)
 
-GROUND = 0.36  # ride height: wheel-center height, and chassis floor reference
+# ride height: wheel-center height, and chassis floor reference. Must exceed the tire's outer
+# radius (major_radius 0.40 + minor_radius 0.075 = 0.475) or the wheels sink through the ground
+# plane -- caught by measuring proportions against the reference images and checking the numbers.
+GROUND = 0.50
 
 # ================= BODY SHELL: long hood, wide rear haunches, low fastback beltline =================
 # (x, half_width, top_z) -- top_z is the beltline the greenhouse sits on; the body itself stays
@@ -274,12 +277,15 @@ bevel.segments = 2
 # more rakish fastback roofline than a first pass gave it -- roof peak lower relative to
 # the body, and the rear glass taper stretched out over a longer run instead of a sharp
 # step down into the decklid.
+# Pixel-grid measurement against ref_side.png (ground/beltline/roof-peak rows) shows the
+# greenhouse rising roughly as tall as the lower body below the beltline, not a shallow bump --
+# roof_z raised accordingly from the previous pass's 0.84 to ~1.00.
 green_sections = [
-    (0.95, 0.78, 0.50, 0.56),    # windshield base
-    (0.45, 0.80, 0.50, 0.84),    # roof front (A-pillar)
-    (-0.90, 0.80, 0.50, 0.84),   # roof rear -- wide flat plateau (0.45 -> -0.90) so the roof
+    (0.95, 0.78, 0.50, 0.60),    # windshield base
+    (0.45, 0.80, 0.50, 1.00),    # roof front (A-pillar)
+    (-0.90, 0.80, 0.50, 1.00),   # roof rear -- wide flat plateau (0.45 -> -0.90) so the roof
                                  # reads as a roof at full-car scale, not a short tent apex
-    (-1.85, 0.84, 0.44, 0.46),   # long, shallow fastback taper into the decklid
+    (-1.85, 0.84, 0.44, 0.48),   # long, shallow fastback taper into the decklid
 ]
 
 def green_ring(half_w, base_z, roof_z):
@@ -416,11 +422,11 @@ cyl("tachometer", 0.05, 0.02, dashboard, MAT_LIGHT, loc=(0.05, 0.20, 0.05), rot=
 
 # ================= ARMOR (wasteland roof brace/push-bar plating; a roof plate sized to and
 # sitting flush on the greenhouse, whose peak is now GROUND+0.90, not the old GROUND+1.00) =================
-armor = new_empty("armor", parent=chassis_root, loc=(0, 0, GROUND + 0.845))
+armor = new_empty("armor", parent=chassis_root, loc=(0, 0, GROUND + 1.005))
 box("roofBrace", (1.25, 0.58, 0.02), armor, MAT_ARMOR, loc=(-0.20, 0, 0))
 
 # ================= CARGO RACK (roof-mounted, wasteland module; sits just above the roof brace) =================
-cargo = new_empty("cargo", parent=chassis_root, loc=(-0.40, 0, GROUND + 0.865))
+cargo = new_empty("cargo", parent=chassis_root, loc=(-0.40, 0, GROUND + 1.025))
 box("rackBed", (0.70, 0.80, 0.03), cargo, MAT_CARGO, loc=(0, 0, 0))
 for side in (-1, 1):
     cyl("rackRail" + ("L" if side < 0 else "R"), 0.015, 0.70, cargo, MAT_METAL,
