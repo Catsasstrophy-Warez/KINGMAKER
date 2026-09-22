@@ -39,3 +39,30 @@ import Testing
     #expect(coordinator.spawnedVehicleIDs.count == DHProductionVehicleRoster.entries.count)
     #expect(coordinator.spawnedVehicleIDs.contains("veh.patrol-cruiser-7"))
 }
+
+@Test func everyRosterNPCHasABrainWithAFullDaySchedule() throws {
+    let brains = DHProductionNPCRoster.makeBrains()
+    #expect(brains.count == DHProductionNPCRoster.entries.count)
+    for entry in DHProductionNPCRoster.entries {
+        let brain = try #require(brains[entry.id])
+        #expect(brain.schedule.count == 5)
+        #expect(brain.schedule.allSatisfy { $0.locationID == entry.home.rawValue })
+    }
+}
+
+@Test func scheduledActivityChangesAcrossTheDay() {
+    let mara = DHProductionNPCRoster.entries.first { $0.id == "npc.mara-voss" }!
+    var brain = DHAgentBrain(npcID: mara.id, schedule: DHProductionNPCRoster.defaultSchedule(for: mara.occupation, home: mara.home))
+    brain.tick(hour: 2, threat: 0)
+    #expect(brain.activity == .sleep)
+    brain.tick(hour: 10, threat: 0)
+    #expect(brain.activity == .work)
+}
+
+@Test func everyRosterNPCHasNonEmptyDialogueIncludingAGreeting() {
+    for entry in DHProductionNPCRoster.entries {
+        let options = DHProductionNPCRoster.defaultDialogue(for: entry)
+        #expect(options.contains { $0.intent == .greet })
+        #expect(options.allSatisfy { !$0.text.isEmpty })
+    }
+}

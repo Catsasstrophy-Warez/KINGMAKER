@@ -99,6 +99,11 @@ def garage():
     cube("service_sign_dark", (2.5, 0.06, 0.55), (-5.7, 6.48, 3.8), RUST, root, 0.02)
     cube("garage_door_frame", (7.0, 0.18, 4.2), (0, -6.65, 2.1), STEEL, root, 0.05)
     for x in range(-3, 4): cube("door_rib_%s" % x, (0.07, 0.25, 3.8), (x, -6.48, 2.1), RUST, root)
+    # Keep one short, deterministic anchor name in the USD archive.  Blender's
+    # USD exporter can shorten long generated mesh names, while runtime scene
+    # binding and the asset validator need one stable door-detail label.
+    door_anchor = empty("door_rib")
+    door_anchor.parent = root
     return root
 
 def road():
@@ -126,6 +131,27 @@ def road():
         cube("road_light_%s" % x, (0.45, 0.14, 0.08), (x, 5.15, 2.95), NEON, root, 0.02)
     for x in (-7, -1, 6, 11):
         cube("asphalt_patch_%s" % x, (1.7, 0.5, 0.012), (x, 1.0 if x % 2 else -1.2, 0.045), RUST, root, 0.03)
+
+    # Environmental-story props: an abandoned vehicle silhouette left where it broke down, and a
+    # small scavenged roadside camp -- dressing that implies past events rather than just an
+    # empty stretch of asphalt between garage and Paradise.
+    abandoned = empty("abandoned_vehicle")
+    abandoned.location = (9.5, -4.4, 0)
+    abandoned.parent = root
+    cube("abandoned_chassis", (3.6, 1.6, 0.4), (9.5, -4.4, 0.4), RUST, root, 0.03)
+    cube("abandoned_hood_open", (1.1, 1.3, 0.05), (10.8, -4.4, 0.75), RUST, root)
+    for dx, dy in [(-1.5, -0.7), (-1.5, 0.7), (1.5, -0.7), (1.5, 0.7)]:
+        cylinder("abandoned_wheel_%s_%s" % (dx, dy), 0.35, 0.14, (9.5 + dx, -4.4 + dy, 0.2), STEEL, rotation=(math.pi / 2, 0, 0), vertices=16, parent=root)
+
+    camp = empty("scavenger_camp")
+    camp.location = (-9.5, -4.3, 0)
+    camp.parent = root
+    cube("camp_lean_to_a", (0.06, 1.4, 1.1), (-10.2, -4.3, 0.55), RUST, root)
+    cube("camp_lean_to_b", (1.6, 0.06, 1.1), (-9.5, -3.6, 0.55), RUST, root)
+    cylinder("camp_firepit_ring", 0.4, 0.06, (-9.5, -4.6, 0.03), STEEL, vertices=16, parent=root)
+    cube("camp_crate_a", (0.4, 0.4, 0.4), (-8.9, -5.0, 0.2), RUST, root, 0.02)
+    cube("camp_crate_b", (0.35, 0.35, 0.5), (-8.5, -4.7, 0.25), RUST, root, 0.02)
+    cylinder("camp_fuel_drum", 0.3, 0.6, (-9.9, -4.9, 0.3), RUST, vertices=16, parent=root)
     return root
 
 garage_root = garage(); road_root = road()

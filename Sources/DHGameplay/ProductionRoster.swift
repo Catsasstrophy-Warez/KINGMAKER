@@ -59,6 +59,74 @@ public enum DHProductionNPCRoster {
         let hash = UInt64(bitPattern: Int64(hasher.finalize()))
         return String(format: "00000000-0000-4000-8000-%012x", hash & 0xFFFFFFFFFFFF)
     }
+
+    /// A default daily schedule per occupation -- work hours at home, sleep, and an eat block --
+    /// so named roster NPCs aren't just static home/faction data. DHAgentBrain.tick(hour:threat:)
+    /// already reads a schedule; roster entries previously never had one, so no roster NPC ever
+    /// changed activity across a day.
+    public static func defaultSchedule(for occupation: Occupation, home: BlackridgeSite) -> [DHNPCScheduleBlock] {
+        let homeID = home.rawValue
+        let workActivity: DHAgentActivity
+        switch occupation {
+        case .mechanic, .fuelDealer, .railWorker: workActivity = .work
+        case .trader, .gambler: workActivity = .trade
+        case .bountyHunter, .guard, .mercenary: workActivity = .patrol
+        case .farmer: workActivity = .work
+        case .doctor: workActivity = .work
+        case .courier: workActivity = .travel
+        case .scavenger, .thief: workActivity = .work
+        case .refugee, .sexWorker: workActivity = .idle
+        }
+        return [
+            .init(startHour: 0, endHour: 6, activity: .sleep, locationID: homeID),
+            .init(startHour: 6, endHour: 8, activity: .eat, locationID: homeID),
+            .init(startHour: 8, endHour: 18, activity: workActivity, locationID: homeID),
+            .init(startHour: 18, endHour: 20, activity: .eat, locationID: homeID),
+            .init(startHour: 20, endHour: 24, activity: .idle, locationID: homeID),
+        ]
+    }
+
+    /// One DHAgentBrain per roster entry, pre-loaded with its default schedule and keyed by the
+    /// roster's stable string ID (not the derived EntityID -- matches how the coordinator's
+    /// spawnedNPCIDs tracks roster membership by string id).
+    public static func makeBrains() -> [String: DHAgentBrain] {
+        var brains: [String: DHAgentBrain] = [:]
+        for entry in entries {
+            brains[entry.id] = DHAgentBrain(npcID: entry.id, schedule: defaultSchedule(for: entry.occupation, home: entry.home))
+        }
+        return brains
+    }
+
+    /// A minimal occupation-flavored dialogue stub: every named NPC can at least be greeted and
+    /// asked about their trade, rather than only existing as home/faction data with no line of
+    /// dialogue attached at all.
+    public static func defaultDialogue(for entry: (id: String, name: String, occupation: Occupation, home: BlackridgeSite, faction: Faction?)) -> [DialogueOption] {
+        [
+            .init(text: "Hey, \(entry.name).", intent: .greet, difficulty: 0),
+            .init(text: occupationLine(entry.occupation), intent: .trade, difficulty: 1),
+            .init(text: "What's the word around here?", intent: .rumor, difficulty: 0),
+        ]
+    }
+
+    private static func occupationLine(_ occupation: Occupation) -> String {
+        switch occupation {
+        case .mechanic: return "Got parts, or need parts?"
+        case .trader: return "Let's talk trade."
+        case .fuelDealer: return "Fuel's not cheap out here."
+        case .bountyHunter: return "You got a name for me, or a price on yours?"
+        case .farmer: return "Crops are thin this season."
+        case .sexWorker: return "Looking for company?"
+        case .mercenary: return "Work's work. What's the job?"
+        case .doctor: return "Sit down before you bleed on my floor."
+        case .gambler: return "Care to make it interesting?"
+        case .refugee: return "Just trying to get by."
+        case .thief: return "Didn't see anything. Didn't take anything."
+        case .courier: return "Got a package, got a price."
+        case .guard: return "Move along, or state your business."
+        case .scavenger: return "Found some things. Might sell 'em."
+        case .railWorker: return "Tracks don't fix themselves."
+        }
+    }
 }
 
 public enum DHProductionVehicleRoster {
