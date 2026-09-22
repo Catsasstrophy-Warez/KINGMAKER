@@ -13,6 +13,8 @@ public struct DHRev10AssetBinding: Codable, Equatable, Sendable, Identifiable {
 public enum DHRev10AssetManifest {
     public static let bindings: [DHRev10AssetBinding] = [
         .init(id: "garage.mesh", kind: .mesh, stableEntityID: "chunk.garage", sourceName: "BlackridgeGarage.usdz"),
+        .init(id: "blackridge.road", kind: .mesh, stableEntityID: "road.segment.blackridge", sourceName: "BlackridgeRoadSegment.usdz"),
+        .init(id: "paradise.interior", kind: .mesh, stableEntityID: "chunk.paradiseInterior", sourceName: "ParadiseInterior.usdz"),
         .init(id: "kingmaker.mesh", kind: .mesh, stableEntityID: "kingmaker", sourceName: "Kingmaker_XR13.usdz"),
         .init(id: "kingmaker.enginebay", kind: .mesh, stableEntityID: "kingmaker.engineBay", sourceName: "Kingmaker_EngineBay.usdz"),
         .init(id: "player.navmesh", kind: .navmesh, stableEntityID: "chunk.garage", sourceName: "BlackridgeGarage.navmesh"),

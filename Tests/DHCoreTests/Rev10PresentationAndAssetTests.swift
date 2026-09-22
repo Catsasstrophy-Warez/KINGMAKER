@@ -81,6 +81,13 @@ import Testing
     #expect(DHRev10AssetResolver.missingRequiredBindings.contains { $0.id == "kingmaker.mesh" } == false)
 }
 
+@Test func rev10BundledParadiseInteriorAssetResolves() {
+    let binding = DHRev10AssetManifest.bindings.first { $0.id == "paradise.interior" }!
+    #expect(binding.stableEntityID == "chunk.paradiseInterior")
+    #expect(DHRev10AssetResolver.url(for: binding) != nil)
+    #expect(DHRev10AssetResolver.missingRequiredBindings.contains { $0.id == "paradise.interior" } == false)
+}
+
 @Test func rev10ProductionContractsCoverRenderingNavigationAndAudio() {
     var budget = DHRev10RenderBudget()
     budget.reduceForThermals()
