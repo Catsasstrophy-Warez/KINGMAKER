@@ -50,6 +50,31 @@ def fade(samples, in_s=0.02, out_s=0.05):
     return out
 
 
+def lowpass(samples, alpha=0.25):
+    """One-pole low-pass smoothing. Raw additive-sine synthesis has hard, buzzy edges between
+    harmonics; this softens them so a tone reads as filtered through metal/an exhaust pipe rather
+    than a bare synth waveform. Lower alpha = more smoothing/darker tone."""
+    out = []
+    prev = 0.0
+    for s in samples:
+        prev = prev + alpha * (s - prev)
+        out.append(prev)
+    return out
+
+
+def normalize(samples, peak=0.9):
+    """Peak-normalize to a consistent target level. Previously every stem's loudness was whatever
+    its synthesis function's amplitude constants happened to add up to -- some stems (e.g. the
+    quiet Paradise_Negotiation murmur) were much quieter than others (e.g. Hostile_Attack) with no
+    deliberate reason, and none were guaranteed not to clip. This is the mastering pass that was
+    missing: every stem now hits the same real peak level."""
+    peak_found = max((abs(s) for s in samples), default=0.0)
+    if peak_found <= 1e-9:
+        return samples
+    scale = peak / peak_found
+    return [s * scale for s in samples]
+
+
 def engine_rumble(duration, base_freq, harmonics, noise_amount):
     n = int(duration * SAMPLE_RATE)
     samples = []
@@ -58,6 +83,29 @@ def engine_rumble(duration, base_freq, harmonics, noise_amount):
         v = 0.0
         for k, amp in enumerate(harmonics, start=1):
             v += amp * math.sin(2 * math.pi * base_freq * k * t)
+        v += noise_amount * (random.random() * 2 - 1)
+        samples.append(v * 0.5)
+    return samples
+
+
+def engine_pulse_train(duration, firing_hz, harmonics, noise_amount, decay_rate=14):
+    """A combustion-pulse model, not a sustained sine sum: real engine exhaust/valvetrain sound
+    comes from discrete per-cylinder firing events (fast attack, exponential decay within each
+    firing cycle), not a continuous tone. This keeps engine_rumble()'s harmonic-stack tonal color
+    but multiplies it by a per-cycle firing envelope, so it reads as a "chugging" combustion
+    texture instead of a synth pad -- the single biggest gap between the old stems and how a real
+    engine actually sounds."""
+    n = int(duration * SAMPLE_RATE)
+    samples = []
+    period = 1.0 / firing_hz
+    for i in range(n):
+        t = i / SAMPLE_RATE
+        phase = (t % period) / period
+        envelope = math.exp(-phase * decay_rate)
+        v = 0.0
+        for k, amp in enumerate(harmonics, start=1):
+            v += amp * math.sin(2 * math.pi * firing_hz * k * t)
+        v *= (0.4 + 0.6 * envelope)
         v += noise_amount * (random.random() * 2 - 1)
         samples.append(v * 0.5)
     return samples
@@ -109,15 +157,22 @@ def starter_crank(duration, cycle_hz=3.5):
 
 
 def catch_and_settle(duration):
-    """Engine catching: a rising whine that resolves into a steady idle rumble."""
+    """Engine catching: a rising whine that resolves into a steady idle rumble, now with the idle
+    portion carrying a real per-cycle firing envelope (see engine_pulse_train) instead of settling
+    into a flat sine, so the tail actually sounds like an idling engine, not a held tone."""
     n = int(duration * SAMPLE_RATE)
     samples = []
+    idle_hz = 21.0
+    period = 1.0 / idle_hz
     for i in range(n):
         t = i / SAMPLE_RATE
         catch_progress = min(1.0, t / (duration * 0.4))
         freq = 60 + 140 * catch_progress
         rumble = 0.5 * math.sin(2 * math.pi * freq * t)
-        settle = 0.2 * math.sin(2 * math.pi * 42 * t) * min(1.0, t / duration)
+        settle_progress = min(1.0, t / duration)
+        phase = (t % period) / period
+        firing_envelope = 0.5 + 0.5 * math.exp(-phase * 12)
+        settle = 0.22 * math.sin(2 * math.pi * 42 * t) * firing_envelope * settle_progress
         noise = (random.random() * 2 - 1) * 0.06
         samples.append(rumble * (1 - catch_progress * 0.5) + settle + noise)
     return samples
@@ -184,9 +239,12 @@ def soft_murmur(duration):
     return samples
 
 
+# Exhaust/valvetrain now use engine_pulse_train's combustion-firing model instead of
+# engine_rumble's sustained sine sum, and exhaust is low-pass filtered (muffled through a pipe)
+# where valvetrain -- mechanical clatter under the hood, not muffled -- is left brighter.
 stems = {
-    "XR13_Exhaust_Loop.wav": fade(engine_rumble(2.0, 42, [1.0, 0.5, 0.3, 0.15], 0.08)),
-    "XR13_Valvetrain_Loop.wav": fade(engine_rumble(1.0, 110, [0.6, 0.4, 0.5, 0.2], 0.15)),
+    "XR13_Exhaust_Loop.wav": lowpass(fade(engine_pulse_train(2.0, 42, [1.0, 0.5, 0.3, 0.15], 0.08)), alpha=0.35),
+    "XR13_Valvetrain_Loop.wav": fade(engine_pulse_train(1.0, 110, [0.6, 0.4, 0.5, 0.2], 0.15, decay_rate=20)),
     "XR13_Supercharger_Loop.wav": fade(whine(1.5, 220, 40)),
     "XR13_DCT_Shift.wav": fade(clunk(0.4), in_s=0.001, out_s=0.1),
     "Kingmaker_Crank.wav": fade(starter_crank(1.6), in_s=0.01, out_s=0.05),
@@ -202,13 +260,13 @@ stems = {
 
 for name, samples in stems.items():
     path = os.path.join(OUT, name)
-    write_wav(path, samples)
+    write_wav(path, normalize(samples))
     print("WROTE", path, len(samples), "samples")
 
 # Radio_Consequences is declared as .m4a in the manifest; synthesize the source as WAV then
 # transcode with afconvert (built into macOS) since the `wave` module can't write AAC directly.
 radio_wav = os.path.join(OUT, "_radio_tmp.wav")
-write_wav(radio_wav, fade(static_burst(1.2), in_s=0.05, out_s=0.15))
+write_wav(radio_wav, normalize(fade(static_burst(1.2), in_s=0.05, out_s=0.15)))
 radio_m4a = os.path.join(OUT, "Radio_Consequences.m4a")
 try:
     subprocess.run(["afconvert", "-f", "m4af", "-d", "aac", radio_wav, radio_m4a], check=True)
@@ -223,5 +281,5 @@ finally:
 # radio.static: a shorter, un-transcoded static burst for the ambient/tuning cue (radioConsequence
 # above is the "a broadcast just happened" one-shot; this is the idle scan/interference loop).
 static_path = os.path.join(OUT, "Radio_Static.wav")
-write_wav(static_path, fade(static_burst(0.9), in_s=0.02, out_s=0.1))
+write_wav(static_path, normalize(fade(static_burst(0.9), in_s=0.02, out_s=0.1)))
 print("WROTE", static_path)

@@ -129,6 +129,13 @@ needs to be a visual/audio replacement, not a functional one.
       rendering system; documented in the code as not directly transferable, but the caution
       still applied). Every material now receives real ambient/reflective lighting instead of
       only a single directional light against a flat background.
-- [ ] Real audio to replace the 15 synthesized placeholder stems
+- [~] Audio synthesis quality pass — still procedurally synthesized, not recorded/licensed audio
+      (that's a genuine limit, not a scope choice: nothing here can record a real engine or
+      license commercial audio). What moved: engine exhaust/valvetrain now use a real combustion-
+      pulse model (a per-cylinder-firing amplitude envelope) instead of a sustained sine sum,
+      exhaust is low-pass filtered to read as muffled-through-a-pipe, and every one of the 15
+      stems is now peak-normalized to a consistent, verified level instead of each synthesis
+      function's arbitrary amplitude (previously some stems were far louder than others with no
+      deliberate reason).
 - [ ] Second animation clip (idle) for the mannequin rig
 - [ ] Unique per-NPC material variation across the 20-entry roster
