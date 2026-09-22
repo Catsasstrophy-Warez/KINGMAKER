@@ -23,3 +23,19 @@ import Testing
     #expect(fleet.vehicles.values.contains { $0.name == "Patrol Cruiser Seven" && $0.kind == .interceptor })
     #expect(fleet.vehicles.values.contains { $0.kind == .wreck && $0.condition < 1 })
 }
+
+@Test func coordinatorPopulatesOnlyTheNPCsWhoseHomeMatchesTheRequestedSite() {
+    var coordinator = DHRev10SliceCoordinator()
+    #expect(coordinator.spawnedNPCIDs.isEmpty)
+    coordinator.populateProductionRoster(forSite: .kingmakerGarage)
+    let expected = Set(DHProductionNPCRoster.entries.filter { $0.home == .kingmakerGarage }.map(\.id))
+    #expect(!expected.isEmpty)
+    #expect(coordinator.spawnedNPCIDs == expected)
+}
+
+@Test func coordinatorPopulatesTheFullVehicleRoster() {
+    var coordinator = DHRev10SliceCoordinator()
+    coordinator.populateProductionVehicleRoster()
+    #expect(coordinator.spawnedVehicleIDs.count == DHProductionVehicleRoster.entries.count)
+    #expect(coordinator.spawnedVehicleIDs.contains("veh.patrol-cruiser-7"))
+}

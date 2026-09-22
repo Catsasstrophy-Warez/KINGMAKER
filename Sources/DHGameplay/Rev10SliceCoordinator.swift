@@ -3,6 +3,8 @@ import DHCore
 import DHWorld
 import DHVehicle
 import DHCombat
+import DHNPC
+import DHFleet
 
 public enum DHRev10InspectionMode: String, Codable, Sendable { case world, kingmakerExterior, engineBay, cabin, damage, dmm }
 public enum DHRev10PlayerMode: String, Codable, Sendable { case onFoot, inspecting, repairing, driving, combat, dialogue }
@@ -22,7 +24,25 @@ public struct DHRev10SliceCoordinator: Codable, Equatable, Sendable {
     public var lootCollected: Set<String> = []
     public var recruitedNPCID: String?
     public var encounter = DHVehicleEncounterRuntime()
+    /// Named DHProductionNPCRoster/DHProductionVehicleRoster IDs currently spawned into the
+    /// world. Previously ProductionRoster.swift's makePopulation()/makeFleet() produced content
+    /// nothing in the live slice consumed; populateProductionRoster(forSite:) is how the
+    /// coordinator actually puts named roster entries into the world instead of only being able
+    /// to construct them off to the side.
+    public var spawnedNPCIDs: Set<String> = []
+    public var spawnedVehicleIDs: Set<String> = []
     public init() {}
+    public mutating func populateProductionRoster(forSite site: BlackridgeSite) {
+        for entry in DHProductionNPCRoster.entries where entry.home == site {
+            spawnedNPCIDs.insert(entry.id)
+        }
+    }
+    public mutating func populateProductionVehicleRoster() {
+        for entry in DHProductionVehicleRoster.entries {
+            spawnedVehicleIDs.insert(entry.id)
+        }
+    }
+    public mutating func synchronizeVehicle(_ vehicle: KingmakerState) { kingmaker = vehicle }
     public mutating func inspect(_ mode: DHRev10InspectionMode) { playerMode = .inspecting; inspectionMode = mode }
     public mutating func stopInspecting() { playerMode = .onFoot; inspectionMode = .world }
     public mutating func movePlayer(to position: DHRev10ScenePoint, county: DHBlackridgeCounty = .verticalSlice) { playerPosition = position; cameraPosition = DHRev10ScenePoint(x: position.x, y: position.y + 18, z: position.z + 18); _ = county }

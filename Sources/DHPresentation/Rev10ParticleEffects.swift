@@ -74,5 +74,64 @@ public enum DHRev10ParticleEffects {
     public static func applyThermalThrottle(_ budget: DHFXBudget, to emitter: inout ParticleEmitterComponent) {
         emitter.mainEmitter.birthRate = Float(budget.dustParticles) / 4
     }
+
+    /// Falling rain: dense, fast, downward streaks over a wide overhead emitter box. Intensity
+    /// (0...1) scales birth rate and speed so a light drizzle and a downpour are visibly
+    /// different, not just an on/off toggle.
+    public static func rain(intensity: Double, budget: DHFXBudget) -> ParticleEmitterComponent {
+        var emitter = ParticleEmitterComponent()
+        let clamped = max(0, min(1, intensity))
+        emitter.emitterShape = .box
+        emitter.emitterShapeSize = [8, 0.1, 8]
+        emitter.mainEmitter.birthRate = Float(Double(budget.dustParticles) * (0.5 + clamped * 2.5))
+        emitter.mainEmitter.color = .constant(.single(.init(white: 0.75, alpha: 0.35)))
+        emitter.mainEmitter.size = 0.01
+        emitter.mainEmitter.sizeVariation = 0.005
+        emitter.mainEmitter.lifeSpan = 0.8
+        emitter.mainEmitter.lifeSpanVariation = 0.1
+        emitter.speed = Float(2.5 + clamped * 4.0)
+        emitter.speedVariation = 0.3
+        emitter.mainEmitter.acceleration = [0, -6, 0]
+        emitter.isEmitting = clamped > 0.02
+        return emitter
+    }
+
+    /// Mud/splash kickup from wheels on a wet road surface, scaled by vehicle speed (0...1
+    /// normalized) and how saturated the ground is (wetness 0...1, e.g. accumulated rain).
+    public static func mudKickup(speed: Double, wetness: Double) -> ParticleEmitterComponent {
+        var emitter = ParticleEmitterComponent()
+        let clampedSpeed = max(0, min(1, speed))
+        let clampedWetness = max(0, min(1, wetness))
+        emitter.emitterShape = .point
+        emitter.mainEmitter.birthRate = Float(clampedSpeed * clampedWetness * 220)
+        emitter.mainEmitter.color = .constant(.single(.init(red: 0.22, green: 0.16, blue: 0.1, alpha: 0.85)))
+        emitter.mainEmitter.size = Float(0.02 + clampedSpeed * 0.04)
+        emitter.mainEmitter.sizeVariation = 0.015
+        emitter.mainEmitter.lifeSpan = 0.5
+        emitter.mainEmitter.lifeSpanVariation = 0.2
+        emitter.speed = Float(0.8 + clampedSpeed * 3.0)
+        emitter.speedVariation = 0.5
+        emitter.mainEmitter.acceleration = [0, -3.5, 0]
+        emitter.isEmitting = clampedSpeed > 0.05 && clampedWetness > 0.05
+        return emitter
+    }
+
+    /// Ground fog for low-visibility wasteland weather: dense, slow-drifting, wide and flat.
+    public static func groundFog(density: Double) -> ParticleEmitterComponent {
+        var emitter = ParticleEmitterComponent()
+        let clamped = max(0, min(1, density))
+        emitter.emitterShape = .box
+        emitter.emitterShapeSize = [12, 0.6, 12]
+        emitter.mainEmitter.birthRate = Float(10 + clamped * 90)
+        emitter.mainEmitter.color = .constant(.single(.init(white: 0.6, alpha: CGFloat(0.05 + clamped * 0.15))))
+        emitter.mainEmitter.size = 0.6
+        emitter.mainEmitter.sizeVariation = 0.2
+        emitter.mainEmitter.lifeSpan = 8
+        emitter.mainEmitter.lifeSpanVariation = 2
+        emitter.speed = 0.03
+        emitter.speedVariation = 0.02
+        emitter.isEmitting = clamped > 0.02
+        return emitter
+    }
 }
 #endif
