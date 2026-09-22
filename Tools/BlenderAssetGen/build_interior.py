@@ -18,25 +18,31 @@ if "--" in sys.argv:
     if "--output-dir" in args:
         OUT = os.path.abspath(args[args.index("--output-dir") + 1])
 os.makedirs(OUT, exist_ok=True)
+GENERATED_DIR = os.path.join(SCRIPT_DIR, "generated")
+TEX_DIR = os.path.join(GENERATED_DIR, "textures")
+
+sys.path.insert(0, SCRIPT_DIR)
+import proc_textures as pt
+
+PATH_WOOD = pt.save_texture(TEX_DIR, "tex_int_wood", pt.wood_texture, size=512)
+PATH_PLASTER = pt.save_texture(TEX_DIR, "tex_int_plaster", pt.plaster_texture, size=512)
+PATH_METAL = pt.save_texture(TEX_DIR, "tex_int_metal", pt.rusted_metal_texture, size=512)
+PATH_CLOTH = pt.save_texture(TEX_DIR, "tex_int_cloth", lambda xs, ys: pt.fabric_texture(xs, ys, tone=(0.42, 0.12, 0.1)), size=256)
 
 
-def mat(name, color, metallic=0.0, roughness=0.65, emission=None):
-    m = bpy.data.materials.new(name)
-    m.use_nodes = True
-    bsdf = m.node_tree.nodes.get("Principled BSDF")
-    bsdf.inputs["Base Color"].default_value = (*color, 1)
-    bsdf.inputs["Metallic"].default_value = metallic
-    bsdf.inputs["Roughness"].default_value = roughness
+def mat(name, color, metallic=0.0, roughness=0.65, emission=None, texture_path=None):
+    m = pt.make_material(name, color, metallic=metallic, roughness=roughness, texture_path=texture_path)
     if emission:
+        bsdf = m.node_tree.nodes.get("Principled BSDF")
         bsdf.inputs["Emission Color"].default_value = (*emission, 1)
         bsdf.inputs["Emission Strength"].default_value = 2.0
     return m
 
 
-WOOD = mat("Interior_Wood", (0.28, 0.18, 0.09), roughness=0.75)
-PLASTER = mat("Interior_Plaster", (0.55, 0.52, 0.46), roughness=0.85)
-METAL = mat("Interior_Metal", (0.3, 0.3, 0.32), metallic=0.7, roughness=0.4)
-CLOTH = mat("Interior_Cloth", (0.42, 0.12, 0.1), roughness=0.9)
+WOOD = mat("Interior_Wood", (0.28, 0.18, 0.09), roughness=0.75, texture_path=PATH_WOOD)
+PLASTER = mat("Interior_Plaster", (0.55, 0.52, 0.46), roughness=0.85, texture_path=PATH_PLASTER)
+METAL = mat("Interior_Metal", (0.3, 0.3, 0.32), metallic=0.7, roughness=0.4, texture_path=PATH_METAL)
+CLOTH = mat("Interior_Cloth", (0.42, 0.12, 0.1), roughness=0.9, texture_path=PATH_CLOTH)
 LAMP = mat("Interior_Lamp", (0.05, 0.04, 0.02), emission=(1.0, 0.7, 0.35))
 
 

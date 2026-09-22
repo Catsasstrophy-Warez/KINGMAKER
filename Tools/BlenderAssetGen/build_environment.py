@@ -17,21 +17,29 @@ if "--" in sys.argv:
     if "--output-dir" in args:
         OUT = os.path.abspath(args[args.index("--output-dir") + 1])
 os.makedirs(OUT, exist_ok=True)
+GENERATED_DIR = os.path.join(SCRIPT_DIR, "generated")
+TEX_DIR = os.path.join(GENERATED_DIR, "textures")
 
-def mat(name, color, metallic=0.0, roughness=0.65, emission=None):
-    m = bpy.data.materials.new(name); m.diffuse_color = (*color, 1)
-    m.use_nodes = True; bsdf = m.node_tree.nodes.get("Principled BSDF")
-    bsdf.inputs["Base Color"].default_value = (*color, 1)
-    bsdf.inputs["Metallic"].default_value = metallic; bsdf.inputs["Roughness"].default_value = roughness
+sys.path.insert(0, SCRIPT_DIR)
+import proc_textures as pt
+
+PATH_CONCRETE = pt.save_texture(TEX_DIR, "tex_env_concrete", pt.concrete_texture, size=512)
+PATH_STEEL = pt.save_texture(TEX_DIR, "tex_env_steel", pt.rusted_metal_texture, size=512)
+PATH_RUST = pt.save_texture(TEX_DIR, "tex_env_rust", pt.rusted_metal_texture, size=512)
+PATH_ASPHALT = pt.save_texture(TEX_DIR, "tex_env_asphalt", pt.asphalt_texture, size=512)
+
+def mat(name, color, metallic=0.0, roughness=0.65, emission=None, texture_path=None):
+    m = pt.make_material(name, color, metallic=metallic, roughness=roughness, texture_path=texture_path)
     if emission:
+        bsdf = m.node_tree.nodes.get("Principled BSDF")
         bsdf.inputs["Emission Color"].default_value = (*emission, 1); bsdf.inputs["Emission Strength"].default_value = 2.0
     return m
 
-CONCRETE = mat("Garage_Concrete", (0.12, 0.13, 0.14), roughness=0.9)
-STEEL = mat("Garage_Steel", (0.25, 0.28, 0.30), metallic=0.8, roughness=0.35)
-RUST = mat("Garage_RustedSteel", (0.22, 0.08, 0.035), metallic=0.45, roughness=0.7)
+CONCRETE = mat("Garage_Concrete", (0.12, 0.13, 0.14), roughness=0.9, texture_path=PATH_CONCRETE)
+STEEL = mat("Garage_Steel", (0.25, 0.28, 0.30), metallic=0.8, roughness=0.35, texture_path=PATH_STEEL)
+RUST = mat("Garage_RustedSteel", (0.22, 0.08, 0.035), metallic=0.45, roughness=0.7, texture_path=PATH_RUST)
 YELLOW = mat("Safety_Yellow", (0.85, 0.46, 0.03), roughness=0.45)
-ROAD = mat("Road_Asphalt", (0.035, 0.04, 0.045), roughness=0.95)
+ROAD = mat("Road_Asphalt", (0.035, 0.04, 0.045), roughness=0.95, texture_path=PATH_ASPHALT)
 LINE = mat("Road_Marking", (0.82, 0.68, 0.27), roughness=0.55)
 NEON = mat("Guide_Light", (0.03, 0.15, 0.18), emission=(0.02, 0.5, 0.65))
 
@@ -71,6 +79,24 @@ def garage():
         cylinder("tool_hook_%02d" % i, 0.035, 0.45, (4.0 + (i % 4) * 0.6, 4.05, 1.3 + (i // 4) * 0.5), YELLOW, rotation=(math.pi / 2, 0, 0), vertices=12, parent=root)
     for x in (-6.5, 6.5):
         cylinder("warning_beacon_%s" % x, 0.18, 0.12, (x, 5.9, 4.7), NEON, vertices=20, parent=root)
+    # Overhead service infrastructure: the garage should read as a working machine
+    # shop, not an empty room around a marker car.
+    for x in (-6.0, 0.0, 6.0):
+        cube("ceiling_truss_%s" % x, (0.22, 13.0, 0.22), (x, 0, 5.0), STEEL, root, 0.04)
+        for y in (-4.5, 0, 4.5):
+            cube("ceiling_light_%s_%s" % (x, y), (1.7, 0.22, 0.06), (x, y, 4.82), NEON, root, 0.02)
+    for y in (2.4, 3.2, 4.0):
+        cube("parts_shelf_%s" % y, (3.6, 0.55, 0.10), (-6.8, y, 0.9 + (y - 2.4) * 0.75), STEEL, root, 0.02)
+        for x in (-8.2, -6.8, -5.4):
+            cube("parts_bin_%s_%s" % (x, y), (0.7, 0.42, 0.45), (x, y, 1.2 + (y - 2.4) * 0.75), RUST, root, 0.03)
+    for i in range(3):
+        cylinder("salvage_tire_%s" % i, 0.48, 0.18, (-7.1, -3.5 + i * 0.7, 0.55), RUST, rotation=(math.pi / 2, 0, 0), vertices=24, parent=root)
+    for x in (3.5, 4.5, 5.5):
+        cube("floor_drain_%s" % x, (0.55, 0.08, 0.01), (x, -1.8, 0.015), STEEL, root)
+    for x in (-2.7, -2.2, 2.2, 2.7):
+        cube("lift_hazard_stripe_%s" % x, (0.28, 3.0, 0.025), (x, 0, 0.18), YELLOW, root)
+    cube("service_sign", (2.8, 0.05, 0.9), (-5.7, 6.55, 3.8), YELLOW, root, 0.04)
+    cube("service_sign_dark", (2.5, 0.06, 0.55), (-5.7, 6.48, 3.8), RUST, root, 0.02)
     cube("garage_door_frame", (7.0, 0.18, 4.2), (0, -6.65, 2.1), STEEL, root, 0.05)
     for x in range(-3, 4): cube("door_rib_%s" % x, (0.07, 0.25, 3.8), (x, -6.48, 2.1), RUST, root)
     return root
@@ -87,6 +113,19 @@ def road():
     for x in (-10, 0, 10):
         cylinder("guardrail_post_%s" % x, 0.06, 1.2, (x, 4.8, 0.6), STEEL, vertices=12, parent=root)
         cube("guardrail_%s" % x, (9.0, 0.08, 0.12), (x, 4.8, 1.05), STEEL, root, 0.03)
+    # Wasteland shoulder dressing and infrastructure silhouettes.
+    cube("left_dirt_shoulder", (28, 2.2, 0.10), (0, -5.1, -0.05), RUST, root)
+    cube("right_dirt_shoulder", (28, 2.2, 0.10), (0, 5.1, -0.05), RUST, root)
+    for x, y, s in [(-9, -5.8, .55), (-3, 5.8, .8), (5, -5.7, .42), (11, 5.7, .65), (2, -5.9, .35)]:
+        cylinder("shoulder_rock_%s_%s" % (x, y), s, s * 1.3, (x, y, s * 0.45), STEEL, vertices=8, parent=root)
+    for x in (-8, 8):
+        cylinder("sign_post_%s" % x, 0.05, 2.2, (x, -5.4, 1.1), STEEL, vertices=12, parent=root)
+        cube("dead_highway_sign_%s" % x, (1.4, 0.08, 0.75), (x, -5.4, 2.25), YELLOW, root, 0.04)
+    for x in (-6, 4, 12):
+        cylinder("road_light_post_%s" % x, 0.07, 3.0, (x, 5.4, 1.5), STEEL, vertices=12, parent=root)
+        cube("road_light_%s" % x, (0.45, 0.14, 0.08), (x, 5.15, 2.95), NEON, root, 0.02)
+    for x in (-7, -1, 6, 11):
+        cube("asphalt_patch_%s" % x, (1.7, 0.5, 0.012), (x, 1.0 if x % 2 else -1.2, 0.045), RUST, root, 0.03)
     return root
 
 garage_root = garage(); road_root = road()

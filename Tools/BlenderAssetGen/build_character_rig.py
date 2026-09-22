@@ -32,18 +32,20 @@ os.makedirs(OUT, exist_ok=True)
 FPS = 24
 bpy.context.scene.render.fps = FPS
 
+sys.path.insert(0, SCRIPT_DIR)
+import proc_textures as pt
 
-def mat(name, color):
-    m = bpy.data.materials.new(name)
-    m.use_nodes = True
-    bsdf = m.node_tree.nodes.get("Principled BSDF")
-    bsdf.inputs["Base Color"].default_value = (*color, 1)
-    bsdf.inputs["Roughness"].default_value = 0.6
-    return m
+TEX_DIR = os.path.join(SCRIPT_DIR, "generated", "textures")
+PATH_SKIN = pt.save_texture(TEX_DIR, "tex_mannequin_skin", lambda xs, ys: pt.skin_texture(xs, ys, tone=(0.65, 0.5, 0.42)), size=256)
+PATH_CLOTH = pt.save_texture(TEX_DIR, "tex_mannequin_cloth", lambda xs, ys: pt.fabric_texture(xs, ys, tone=(0.15, 0.16, 0.2)), size=256)
 
 
-SKIN = mat("Mannequin_Skin", (0.65, 0.5, 0.42))
-CLOTH = mat("Mannequin_Cloth", (0.15, 0.16, 0.2))
+def mat(name, color, texture_path=None):
+    return pt.make_material(name, color, roughness=0.6, texture_path=texture_path)
+
+
+SKIN = mat("Mannequin_Skin", (0.65, 0.5, 0.42), texture_path=PATH_SKIN)
+CLOTH = mat("Mannequin_Cloth", (0.15, 0.16, 0.2), texture_path=PATH_CLOTH)
 
 # ---------- armature ----------
 bpy.ops.object.armature_add(enter_editmode=True, location=(0, 0, 0))
