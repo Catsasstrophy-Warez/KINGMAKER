@@ -16,6 +16,8 @@ public final class DHRev10RealityKitScene {
     private var ambientFXEntities: [String: Entity] = [:]
     private var interactionHighlight: Entity?
     private var activeInteractionID: String?
+    private var npcTemplate: Entity?
+    private var npcEntities: [String: Entity] = [:]
     public private(set) var loadedAssetIDs: Set<String> = []
     public private(set) var missingAssetIDs: Set<String> = []
     private let animationLibrary = DHRev10AnimationClipLibrary()
@@ -43,6 +45,8 @@ public final class DHRev10RealityKitScene {
         kingmakerVariants.removeAll()
         activeKingmakerVariant = nil
         ambientFXEntities.removeAll()
+        npcTemplate = nil
+        npcEntities.removeAll()
         interactionHighlight = nil
         activeInteractionID = nil
         let camera = PerspectiveCamera()
@@ -289,6 +293,66 @@ public final class DHRev10RealityKitScene {
         }
     }
     public func attach(_ entity: Entity, stableID: String) { anchors[stableID] = entity; root.addChild(entity) }
+
+    /// Registers the loaded mannequin entity (player.walk's resolved asset) as the template every
+    /// spawnNPC(...) call clones. Previously no NPC -- named or otherwise -- had any visual
+    /// representation in this scene at all; DHProductionNPCRoster.appearance(for:) already
+    /// produces real per-NPC skin/cloth colors (DHGameplay), but this file deliberately doesn't
+    /// depend on DHGameplay, so the caller (which does) is responsible for resolving that data and
+    /// passing plain color tuples to spawnNPC below, the same "entities/data come in from outside"
+    /// pattern replaceKingmaker/registerKingmakerVariant already use for the vehicle.
+    public func registerNPCTemplate(_ entity: Entity) {
+        npcTemplate = entity
+    }
+
+    /// Clones the registered NPC template and retints its skin/cloth sub-meshes (matched by the
+    /// stable part names build_character_rig.py exports: head_mesh/upperarm_*/forearm_*/
+    /// lowerleg_* for skin, torso/pelvis/upperleg_* for cloth) to the given colors, then places it
+    /// at `position`. Returns nil (no-op) if no template has been registered yet.
+    @discardableResult
+    public func spawnNPC(id: String, skinTone: (r: Double, g: Double, b: Double), clothColor: (r: Double, g: Double, b: Double), at position: DHVector3) -> Entity? {
+        guard let template = npcTemplate else { return nil }
+        let instance = template.clone(recursive: true)
+        instance.name = id
+        instance.position = [Float(position.x), Float(position.y), Float(position.z)]
+        applyNPCAppearance(to: instance, skinTone: skinTone, clothColor: clothColor)
+        npcEntities[id]?.removeFromParent()
+        npcEntities[id] = instance
+        anchors[id] = instance
+        root.addChild(instance)
+        return instance
+    }
+
+    public func removeNPC(id: String) {
+        npcEntities[id]?.removeFromParent()
+        npcEntities.removeValue(forKey: id)
+        anchors.removeValue(forKey: id)
+    }
+
+    private static let npcSkinPartNames: Set<String> = ["head_mesh", "upperarm_L", "forearm_L", "upperarm_R", "forearm_R", "lowerleg_L", "lowerleg_R"]
+    private static let npcClothPartNames: Set<String> = ["torso", "pelvis", "upperleg_L", "upperleg_R"]
+
+    private func applyNPCAppearance(to entity: Entity, skinTone: (r: Double, g: Double, b: Double), clothColor: (r: Double, g: Double, b: Double)) {
+        let skinMaterial = SimpleMaterial(color: SimpleMaterial.Color(red: CGFloat(skinTone.r), green: CGFloat(skinTone.g), blue: CGFloat(skinTone.b), alpha: 1), isMetallic: false)
+        let clothMaterial = SimpleMaterial(color: SimpleMaterial.Color(red: CGFloat(clothColor.r), green: CGFloat(clothColor.g), blue: CGFloat(clothColor.b), alpha: 1), isMetallic: false)
+        for descendant in allDescendants(of: entity) {
+            guard let model = descendant as? ModelEntity, model.model != nil else { continue }
+            if Self.npcSkinPartNames.contains(descendant.name) {
+                model.model?.materials = [skinMaterial]
+            } else if Self.npcClothPartNames.contains(descendant.name) {
+                model.model?.materials = [clothMaterial]
+            }
+        }
+    }
+
+    private func allDescendants(of entity: Entity) -> [Entity] {
+        var result: [Entity] = []
+        for child in entity.children {
+            result.append(child)
+            result.append(contentsOf: allDescendants(of: child))
+        }
+        return result
+    }
 
     /// Samples the player.interact animation clip's spine track at `time` seconds and rotates
     /// the player-avatar entity accordingly -- the repair gesture. Previously

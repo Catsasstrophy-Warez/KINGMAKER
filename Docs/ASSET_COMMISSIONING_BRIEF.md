@@ -77,9 +77,11 @@ One mannequin rig exists with two clips (`player.walk`, `player.idle`) — a hum
 hips/spine/head/arms/legs bones. A production character needs the same skeleton topology (or
 better) plus at minimum those same two clips. 20 named NPCs exist as data
 (`Sources/DHGameplay/ProductionRoster.swift`), each with a deterministic skin tone + cloth color
-(`DHProductionNPCRoster.appearance(for:)`) meant to tint the one shared rig — no unique meshes
-needed for v1. What's still missing: actually spawning tinted NPC entities in
-`Rev10RealityKitScene` (no NPC visualization exists there yet for any NPC, named or not).
+(`DHProductionNPCRoster.appearance(for:)`), and `Rev10RealityKitScene.spawnNPC(id:skinTone:
+clothColor:at:)` now actually clones the shared mannequin template and retints its skin/cloth
+sub-meshes per NPC — no unique meshes needed for v1. The caller (App layer) is responsible for
+registering the loaded template once (`registerNPCTemplate`) and resolving each NPC's appearance
+data before calling spawnNPC, since DHPresentation deliberately doesn't depend on DHGameplay.
 
 ## Audio
 
