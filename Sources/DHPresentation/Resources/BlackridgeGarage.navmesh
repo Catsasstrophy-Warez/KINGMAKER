@@ -1,0 +1,79 @@
+{
+  "chunkID": "chunk.garage",
+  "units": "meters",
+  "polygons": [
+    {
+      "id": "bay.main",
+      "vertices": [
+        [
+          -4.5,
+          -3.0
+        ],
+        [
+          4.5,
+          -3.0
+        ],
+        [
+          4.5,
+          3.0
+        ],
+        [
+          -4.5,
+          3.0
+        ]
+      ]
+    },
+    {
+      "id": "bay.aisle",
+      "vertices": [
+        [
+          -4.5,
+          -1.0
+        ],
+        [
+          4.5,
+          -1.0
+        ],
+        [
+          4.5,
+          1.0
+        ],
+        [
+          -4.5,
+          1.0
+        ]
+      ]
+    },
+    {
+      "id": "entry.apron",
+      "vertices": [
+        [
+          4.5,
+          -2.0
+        ],
+        [
+          7.0,
+          -2.0
+        ],
+        [
+          7.0,
+          2.0
+        ],
+        [
+          4.5,
+          2.0
+        ]
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "bay.main",
+      "to": "bay.aisle"
+    },
+    {
+      "from": "bay.aisle",
+      "to": "entry.apron"
+    }
+  ]
+}
