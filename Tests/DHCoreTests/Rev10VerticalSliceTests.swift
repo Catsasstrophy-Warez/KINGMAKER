@@ -32,6 +32,22 @@ import Testing
     #expect(slice.beat == .reload)
 }
 
+@Test func everyVerticalSliceBeatHasOneReachableSuccessor() {
+    let ordered: [DHRev10Beat] = [.garage, .inspect, .diagnose, .scavenge, .repair, .start, .drive, .hostileEncounter, .radioConsequence, .paradise, .negotiate, .recruit, .save, .reload]
+    for (current, next) in zip(ordered, ordered.dropFirst()) {
+        var slice = DHRev10VerticalSlice()
+        if current != .garage {
+            for beat in ordered.dropLast() {
+                if beat == current { break }
+                let advanced = slice.advance(to: beat == .garage ? .inspect : beat)
+                #expect(advanced)
+            }
+        }
+        let advanced = slice.advance(to: next)
+        #expect(advanced, "dead-end vertical-slice beat: \(current.rawValue)")
+    }
+}
+
 @Test func rev10SaveReloadPreservesWorldState() throws {
     var slice = DHRev10VerticalSlice()
     for beat in [DHRev10Beat.inspect, .diagnose, .scavenge, .repair, .start, .drive, .hostileEncounter, .radioConsequence, .paradise, .negotiate, .recruit, .save] {

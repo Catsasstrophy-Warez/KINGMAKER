@@ -10,6 +10,8 @@ import RealityKit
 public final class DHRev10RealityKitScene {
     public let root = Entity()
     private var anchors: [String: Entity] = [:]
+    private let animationLibrary = DHRev10AnimationClipLibrary()
+    private let combatFXLibrary = DHRev10CombatFXLibrary()
 
     public init() { root.name = "Blackridge County Rev10" }
 
@@ -57,7 +59,8 @@ public final class DHRev10RealityKitScene {
         root.addChild(player)
         anchors["player.avatar"] = player
         for road in county.roads {
-            let roadEntity = marker(name: "road.\(road.id)", size: 0.35, height: 0.08, color: .orange)
+            let roadEntity = marker(name: "road.\(road.id)", size: 4.0, height: 0.05, color: .darkGray)
+            roadEntity.scale = [1.8, 1, 0.35]
             roadEntity.position = midpoint(from: anchors[road.from], to: anchors[road.to])
             root.addChild(roadEntity)
             anchors[road.id] = roadEntity
@@ -115,13 +118,78 @@ public final class DHRev10RealityKitScene {
         anchors["kingmaker"] = entity
         root.addChild(entity)
     }
+    public func replaceChunk(_ chunkID: String, with entity: Entity) {
+        anchors[chunkID]?.removeFromParent()
+        entity.name = "chunk.\(chunkID).asset"
+        anchors[chunkID] = entity
+        root.addChild(entity)
+    }
     public func syncKingmaker(position: DHVector3, headingRadians: Double) {
         guard let entity = anchors["kingmaker"] else { return }
         entity.position = [Float(position.x), Float(position.y), Float(position.z)]
         entity.orientation = simd_quatf(angle: Float(headingRadians), axis: [0, 1, 0])
     }
     public func setInterior(_ chunkID: String, visible: Bool) { anchors[chunkID]?.isEnabled = visible }
+    public func setActiveChunks(_ chunkIDs: Set<String>) {
+        for (id, entity) in anchors where entity.name.hasPrefix("chunk.") {
+            entity.isEnabled = chunkIDs.contains(id)
+        }
+    }
     public func attach(_ entity: Entity, stableID: String) { anchors[stableID] = entity; root.addChild(entity) }
+
+    /// Samples the player.interact animation clip's spine track at `time` seconds and rotates
+    /// the player-avatar entity accordingly -- the repair gesture. Previously
+    /// DHRev10AnimationClipLibrary could decode/sample the clip's JSON but nothing applied it to
+    /// a live entity; a no-op (both the clip and the entity are looked up defensively) when
+    /// either isn't present yet, e.g. before build() runs.
+    public func stepPlayerRepairAnimation(time: Double) {
+        guard let clip = animationLibrary.clip(forBindingID: "player.interact"),
+              let player = anchors["player.avatar"],
+              let spineDegrees = clip.sample(bone: "spine", axis: "x", at: time) else { return }
+        player.orientation = simd_quatf(angle: Float(spineDegrees) * .pi / 180, axis: [1, 0, 0])
+    }
+
+    /// Samples the kingmaker.start clip's chassis-shudder track at `time` seconds and offsets the
+    /// chassis entity's height accordingly -- the engine-crank shudder. Same "decode existed,
+    /// nothing applied it" gap as stepPlayerRepairAnimation above.
+    public func stepKingmakerStartAnimation(time: Double) {
+        guard let clip = animationLibrary.clip(forBindingID: "kingmaker.start"),
+              let chassis = anchors["kingmaker.chassis"],
+              let shudderZ = clip.sample(bone: "chassis", axis: "z", at: time) else { return }
+        chassis.position = [0, 0.35 + Float(shudderZ), 0]
+    }
+
+    /// Applies BodyDamageState's per-zone deformation weights to the chassis entity. The
+    /// blockout marker mesh has no authored blend-shape targets to drive (see
+    /// DHRev10DeformationBlendShapes's doc comment), so until a production mesh exists this is a
+    /// crude scale-down proxy -- the point is that the real weight data now drives *something*
+    /// live on the entity graph, not that this looks like a crumpled panel.
+    public func applyDeformation(_ damage: BodyDamageState) {
+        guard let chassis = anchors["kingmaker.chassis"] else { return }
+        let severity = Float(DHRev10DeformationBlendShapes.weights(for: damage).values.max() ?? 0)
+        let scale = 1 - severity * 0.06
+        chassis.scale = [scale, scale, scale]
+    }
+
+    /// Looks up a queued combat-FX cue's real emitter config (see DHRev10CombatFXLibrary) and
+    /// attaches a matching particle emitter to the encounter anchor, so
+    /// DHVehicleEncounterRuntime.activeFXCues actually renders instead of only being consumable
+    /// data. `encounterAnchorID` should match the encounter's stableEntityID (e.g.
+    /// "encounter.north-road"); no-op if that anchor or the cue's config isn't present.
+    @available(iOS 18.0, macOS 15.0, *)
+    public func spawnCombatFX(cue: String, encounterAnchorID: String) {
+        guard let anchor = anchors[encounterAnchorID],
+              let config = combatFXLibrary.emitterConfig(named: cue) else { return }
+        var emitter = ParticleEmitterComponent()
+        emitter.mainEmitter.birthRate = Float(config.birthRate)
+        emitter.mainEmitter.lifeSpan = config.lifespan
+        emitter.speed = Float(config.speed)
+        emitter.isEmitting = true
+        let fxEntity = Entity()
+        fxEntity.name = "fx.\(cue)"
+        fxEntity.components.set(emitter)
+        anchor.addChild(fxEntity)
+    }
 
     private func diagnosticProps(for kind: DHBlackridgeLocationKind) -> [String] {
         switch kind {
