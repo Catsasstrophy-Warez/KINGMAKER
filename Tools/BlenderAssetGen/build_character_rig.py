@@ -128,9 +128,10 @@ WALK_FRAMES = 24
 SWING_DEG = 28
 
 
-def keyframe_swing(bone_name, axis_index, amplitude_deg, phase, frame):
+def keyframe_swing(bone_name, axis_index, amplitude_deg, phase, frame, total_frames=None):
+    total_frames = total_frames or WALK_FRAMES
     bone = pose_bones[bone_name]
-    angle = math.radians(amplitude_deg) * math.sin(2 * math.pi * (frame / WALK_FRAMES) + phase)
+    angle = math.radians(amplitude_deg) * math.sin(2 * math.pi * (frame / total_frames) + phase)
     euler = list(bone.rotation_euler)
     euler[axis_index] = angle
     bone.rotation_euler = euler
@@ -175,3 +176,51 @@ bpy.ops.wm.usd_export(
     convert_orientation=False,
 )
 print("EXPORTED", path, os.path.exists(path) and os.path.getsize(path))
+
+# ---------- idle animation (separate action, separate export) ----------
+# The rig previously had exactly one clip (WalkCycle) -- a player avatar standing still had no
+# animation to play at all. This adds a second, much subtler clip: a slow breathing/weight-shift
+# sway, not another walk-style limb swing, so a stationary player reads as alive rather than
+# frozen. Built as its own Blender action and exported to its own USDZ (Mannequin_Idle.usdz)
+# rather than layered into the walk clip, matching the one-clip-per-file pattern the manifest
+# already expects for player.walk/player.interact/kingmaker.start.
+bpy.context.view_layer.objects.active = armature_obj
+bpy.ops.object.mode_set(mode='POSE')
+for bone in pose_bones:
+    bone.rotation_mode = 'XYZ'
+    bone.rotation_euler = (0, 0, 0)
+
+idle_action = bpy.data.actions.new("Idle")
+armature_obj.animation_data.action = idle_action
+
+IDLE_FRAMES = 72
+IDLE_DEG = 3.0
+
+for frame in range(IDLE_FRAMES + 1):
+    keyframe_swing("spine", 0, IDLE_DEG, 0, frame, total_frames=IDLE_FRAMES)
+    keyframe_swing("spine", 2, IDLE_DEG * 0.5, math.pi / 2, frame, total_frames=IDLE_FRAMES)
+    keyframe_swing("head", 1, IDLE_DEG * 0.4, math.pi / 3, frame, total_frames=IDLE_FRAMES)
+    keyframe_swing("upperarm.L", 2, IDLE_DEG * 0.7, 0, frame, total_frames=IDLE_FRAMES)
+    keyframe_swing("upperarm.R", 2, IDLE_DEG * 0.7, math.pi, frame, total_frames=IDLE_FRAMES)
+    keyframe_swing("hips", 2, IDLE_DEG * 0.3, math.pi / 4, frame, total_frames=IDLE_FRAMES)
+
+idle_action.name = "Idle"
+bpy.context.scene.frame_start = 0
+bpy.context.scene.frame_end = IDLE_FRAMES
+bpy.ops.object.mode_set(mode='OBJECT')
+
+idle_path = os.path.join(OUT, "Mannequin_Idle.usdz")
+bpy.ops.object.select_all(action='SELECT')
+bpy.ops.wm.usd_export(
+    filepath=idle_path,
+    selected_objects_only=True,
+    export_animation=True,
+    export_armatures=True,
+    export_materials=True,
+    export_meshes=True,
+    export_uvmaps=True,
+    export_normals=True,
+    root_prim_path="/",
+    convert_orientation=False,
+)
+print("EXPORTED", idle_path, os.path.exists(idle_path) and os.path.getsize(idle_path))

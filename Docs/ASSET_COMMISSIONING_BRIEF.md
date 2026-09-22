@@ -12,7 +12,7 @@ bottom), the same way `Docs/ROADMAP_1_20.md` tracks the rest of the project.
 Dead Highway is an iOS RealityKit game built on a fully procedural blockout: every mesh, texture,
 audio stem, animation clip, and particle effect currently in the repo is code-generated (Blender
 scripts + numpy-synthesized textures + synthesized audio), deliberately temporary. The simulation,
-save system, combat, economy, and UI are complete and tested (214 automated tests passing). What's
+save system, combat, economy, and UI are complete and tested (217 automated tests passing). What's
 missing is **final art and audio to replace the placeholders without touching any code** — every
 asset below already has a stable ID the engine resolves by name.
 
@@ -73,9 +73,9 @@ replaces `Sources/DHPresentation/Resources/Kingmaker_XR13.usdz` and siblings.
 
 ## Characters
 
-One mannequin rig currently exists (`player.walk` binding, walk-cycle only) — a humanoid skeleton
-with hips/spine/head/arms/legs bones. A production character needs the same skeleton topology (or
-better) plus at minimum idle and walk clips. 20 named NPCs exist as data (name/occupation/faction,
+One mannequin rig exists with two clips (`player.walk`, `player.idle`) — a humanoid skeleton with
+hips/spine/head/arms/legs bones. A production character needs the same skeleton topology (or
+better) plus at minimum those same two clips. 20 named NPCs exist as data (name/occupation/faction,
 `Sources/DHGameplay/ProductionRoster.swift`) with no unique art yet — one shared rig with material
 variation would cover all of them for v1.
 
@@ -137,5 +137,9 @@ needs to be a visual/audio replacement, not a functional one.
       stems is now peak-normalized to a consistent, verified level instead of each synthesis
       function's arbitrary amplitude (previously some stems were far louder than others with no
       deliberate reason).
-- [ ] Second animation clip (idle) for the mannequin rig
+- [x] Second animation clip (idle) for the mannequin rig — `Mannequin_Idle.usdz` (binding
+      `player.idle`), a slow breathing/weight-shift sway across spine/head/arms/hips, much
+      subtler than the walk cycle rather than reusing its limb-swing style. Verified via USD
+      stage introspection (73 real rotation samples) and confirmed the walk clip's own samples
+      (25) were unaffected by sharing the same armature.
 - [ ] Unique per-NPC material variation across the 20-entry roster
