@@ -19,7 +19,7 @@ public enum DHRev10AssetManifest {
         .init(id: "kingmaker.enginebay", kind: .mesh, stableEntityID: "kingmaker.engineBay", sourceName: "Kingmaker_EngineBay.usdz"),
         .init(id: "player.navmesh", kind: .navmesh, stableEntityID: "chunk.garage", sourceName: "BlackridgeGarage.navmesh"),
         .init(id: "blackridge.terrain", kind: .mesh, stableEntityID: "chunk.paradise", sourceName: "BlackridgeCounty_Terrain.usdz"),
-        .init(id: "player.walk", kind: .animation, stableEntityID: "player", sourceName: "Player_Walk.anim"),
+        .init(id: "player.walk", kind: .animation, stableEntityID: "player", sourceName: "Mannequin_WalkCycle.usdz"),
         .init(id: "player.interact", kind: .animation, stableEntityID: "player", sourceName: "Player_Repair.anim"),
         .init(id: "kingmaker.start", kind: .animation, stableEntityID: "kingmaker", sourceName: "Kingmaker_Start.anim"),
         .init(id: "radio.consequence", kind: .audio, stableEntityID: "radio", sourceName: "Radio_Consequences.m4a"),
