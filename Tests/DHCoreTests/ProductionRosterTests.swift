@@ -104,6 +104,40 @@ import Testing
     #expect(mechanicColor.r < 0.4, "mechanic's cloth should read dark/oil-stained")
 }
 
+@Test func placementOffsetIsDeterministicAcrossCalls() {
+    let entry = DHProductionNPCRoster.entries[0]
+    let first = DHProductionNPCRoster.localPlacementOffset(for: entry)
+    let second = DHProductionNPCRoster.localPlacementOffset(for: entry)
+    #expect(first.x == second.x)
+    #expect(first.z == second.z)
+}
+
+@Test func placementOffsetsWithinASiteAreSpreadNotStacked() {
+    let bySite = Dictionary(grouping: DHProductionNPCRoster.entries, by: \.home)
+    var foundASharedSiteWithSpread = false
+    for (_, entries) in bySite where entries.count > 1 {
+        let offsets = entries.map(DHProductionNPCRoster.localPlacementOffset(for:))
+        // No two site-mates should land on (near enough to) the exact same spot.
+        for i in 0..<offsets.count {
+            for j in (i + 1)..<offsets.count {
+                let dx = offsets[i].x - offsets[j].x
+                let dz = offsets[i].z - offsets[j].z
+                #expect((dx * dx + dz * dz) > 0.01, "two NPCs at the same site landed on top of each other")
+            }
+        }
+        foundASharedSiteWithSpread = true
+    }
+    #expect(foundASharedSiteWithSpread, "no site actually had multiple NPCs to test spread against")
+}
+
+@Test func placementOffsetsStayWithinAReasonableRadiusOfTheSiteAnchor() {
+    for entry in DHProductionNPCRoster.entries {
+        let offset = DHProductionNPCRoster.localPlacementOffset(for: entry)
+        let distance = (offset.x * offset.x + offset.z * offset.z).squareRoot()
+        #expect(distance < 3.0, "\(entry.id) placed unreasonably far from its site anchor")
+    }
+}
+
 @Test func everyRosterNPCHasNonEmptyDialogueIncludingAGreeting() {
     for entry in DHProductionNPCRoster.entries {
         let options = DHProductionNPCRoster.defaultDialogue(for: entry)

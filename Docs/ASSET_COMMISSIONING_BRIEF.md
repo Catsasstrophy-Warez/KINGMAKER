@@ -77,10 +77,12 @@ One mannequin rig exists with two clips (`player.walk`, `player.idle`) — a hum
 hips/spine/head/arms/legs bones. A production character needs the same skeleton topology (or
 better) plus at minimum those same two clips. 20 named NPCs exist as data
 (`Sources/DHGameplay/ProductionRoster.swift`), each with a deterministic skin tone + cloth color
-(`DHProductionNPCRoster.appearance(for:)`), and `Rev10RealityKitScene.spawnNPC(id:skinTone:
-clothColor:at:)` now actually clones the shared mannequin template and retints its skin/cloth
-sub-meshes per NPC — no unique meshes needed for v1. The caller (App layer) is responsible for
-registering the loaded template once (`registerNPCTemplate`) and resolving each NPC's appearance
+(`DHProductionNPCRoster.appearance(for:)`) and a deterministic local placement offset relative to
+its home site (`DHProductionNPCRoster.localPlacementOffset(for:)`, spread so site-mates don't
+stack), and `Rev10RealityKitScene.spawnNPC(id:skinTone:clothColor:at:)` now actually clones the
+shared mannequin template and retints its skin/cloth sub-meshes per NPC — no unique meshes needed
+for v1. The caller (App layer) is responsible for registering the loaded template once
+(`registerNPCTemplate`) and resolving each NPC's appearance
 data before calling spawnNPC, since DHPresentation deliberately doesn't depend on DHGameplay.
 
 ## Audio
@@ -150,7 +152,14 @@ needs to be a visual/audio replacement, not a functional one.
       entry a deterministic (stable across app launches, via a real FNV-1a hash rather than
       Swift's per-process-reseeded `Hasher`) skin tone and occupation-flavored cloth color, with
       per-individual jitter so occupation-mates aren't identical (a mechanic isn't a trader isn't
-      a doctor, and two mechanics aren't twins). This is data, not a rendered scene -- actually
-      spawning 20 visible, individually-tinted NPCs in `Rev10RealityKitScene` is separate,
-      larger work (NPC visualization doesn't exist there at all yet, for any NPC); this closes
-      the "what should each one look like" contract that work would consume.
+      a doctor, and two mechanics aren't twins).
+- [x] NPC visualization — `Rev10RealityKitScene.spawnNPC(id:skinTone:clothColor:at:)` clones the
+      shared mannequin template and retints its skin/cloth sub-meshes per NPC (verified with real
+      color-component comparisons, not a string-description proxy); a bug this testing caught
+      (double-prefixed anchor keys silently breaking lookup/respawn) was fixed before it shipped.
+      `DHProductionNPCRoster.localPlacementOffset(for:)` gives each NPC a deterministic local
+      scatter position relative to its home site so site-mates don't stack (verified: no two
+      site-mates land within 0.1 units of each other, every offset stays under 3 units of its
+      site anchor). App-layer wiring (loading the template asset, calling spawnNPC once per
+      spawned roster entry) is the one remaining step, left to the App layer since
+      DHPresentation deliberately doesn't depend on DHGameplay.

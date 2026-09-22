@@ -181,6 +181,28 @@ public enum DHProductionNPCRoster {
         )
         return (skinTone, clothColor)
     }
+
+    /// A small, deterministic local offset (relative to the NPC's home site's world anchor) so
+    /// multiple NPCs sharing a home site scatter into distinct standing positions instead of
+    /// rendering stacked on top of each other -- the last inert link in the roster-to-scene
+    /// pipeline: appearance() has been consumable by Rev10RealityKitScene.spawnNPC(...) since it
+    /// was added, but spawnNPC still needs an explicit position and nothing computed one.
+    ///
+    /// This deliberately does NOT know where a site's world anchor actually is -- that's owned by
+    /// DHWorld/the scene layer, not the roster -- so it returns a local (x, z) offset the caller
+    /// adds to that anchor's position, not an absolute world coordinate. Same-site NPCs are
+    /// spread evenly around a loose circle (by index among their site-mates) with per-individual
+    /// angle/radius jitter so it doesn't read as a mechanically perfect ring.
+    public static func localPlacementOffset(for entry: (id: String, name: String, occupation: Occupation, home: BlackridgeSite, faction: Faction?)) -> (x: Double, z: Double) {
+        let siteMates = entries.filter { $0.home == entry.home }
+        let index = siteMates.firstIndex { $0.id == entry.id } ?? 0
+        let siteMateCount = max(1, siteMates.count)
+        let baseAngle = (2 * Double.pi * Double(index)) / Double(siteMateCount)
+        let angleJitter = (unitHash(entry.id + ".angle") - 0.5) * 0.6
+        let radius = 1.4 + unitHash(entry.id + ".radius") * 1.2
+        let angle = baseAngle + angleJitter
+        return (x: radius * cos(angle), z: radius * sin(angle))
+    }
 }
 
 public enum DHProductionVehicleRoster {
