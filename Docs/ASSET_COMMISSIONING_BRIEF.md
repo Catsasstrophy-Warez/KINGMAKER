@@ -12,7 +12,7 @@ bottom), the same way `Docs/ROADMAP_1_20.md` tracks the rest of the project.
 Dead Highway is an iOS RealityKit game built on a fully procedural blockout: every mesh, texture,
 audio stem, animation clip, and particle effect currently in the repo is code-generated (Blender
 scripts + numpy-synthesized textures + synthesized audio), deliberately temporary. The simulation,
-save system, combat, economy, and UI are complete and tested (217 automated tests passing). What's
+save system, combat, economy, and UI are complete and tested (220 automated tests passing). What's
 missing is **final art and audio to replace the placeholders without touching any code** — every
 asset below already has a stable ID the engine resolves by name.
 
@@ -75,9 +75,11 @@ replaces `Sources/DHPresentation/Resources/Kingmaker_XR13.usdz` and siblings.
 
 One mannequin rig exists with two clips (`player.walk`, `player.idle`) — a humanoid skeleton with
 hips/spine/head/arms/legs bones. A production character needs the same skeleton topology (or
-better) plus at minimum those same two clips. 20 named NPCs exist as data (name/occupation/faction,
-`Sources/DHGameplay/ProductionRoster.swift`) with no unique art yet — one shared rig with material
-variation would cover all of them for v1.
+better) plus at minimum those same two clips. 20 named NPCs exist as data
+(`Sources/DHGameplay/ProductionRoster.swift`), each with a deterministic skin tone + cloth color
+(`DHProductionNPCRoster.appearance(for:)`) meant to tint the one shared rig — no unique meshes
+needed for v1. What's still missing: actually spawning tinted NPC entities in
+`Rev10RealityKitScene` (no NPC visualization exists there yet for any NPC, named or not).
 
 ## Audio
 
@@ -142,4 +144,11 @@ needs to be a visual/audio replacement, not a functional one.
       subtler than the walk cycle rather than reusing its limb-swing style. Verified via USD
       stage introspection (73 real rotation samples) and confirmed the walk clip's own samples
       (25) were unaffected by sharing the same armature.
-- [ ] Unique per-NPC material variation across the 20-entry roster
+- [x] Per-NPC material variation — `DHProductionNPCRoster.appearance(for:)` gives every roster
+      entry a deterministic (stable across app launches, via a real FNV-1a hash rather than
+      Swift's per-process-reseeded `Hasher`) skin tone and occupation-flavored cloth color, with
+      per-individual jitter so occupation-mates aren't identical (a mechanic isn't a trader isn't
+      a doctor, and two mechanics aren't twins). This is data, not a rendered scene -- actually
+      spawning 20 visible, individually-tinted NPCs in `Rev10RealityKitScene` is separate,
+      larger work (NPC visualization doesn't exist there at all yet, for any NPC); this closes
+      the "what should each one look like" contract that work would consume.

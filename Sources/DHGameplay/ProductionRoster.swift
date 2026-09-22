@@ -60,6 +60,19 @@ public enum DHProductionNPCRoster {
         return String(format: "00000000-0000-4000-8000-%012x", hash & 0xFFFFFFFFFFFF)
     }
 
+    /// A [0, 1) value deterministically derived from `key`, stable across process launches --
+    /// unlike Swift's Hasher (used by stableID above for EntityID generation), which reseeds
+    /// randomly per process, so it can't back a "looks the same every time you open the app"
+    /// guarantee. Uses FNV-1a, a small, well-known, genuinely deterministic string hash.
+    static func unitHash(_ key: String) -> Double {
+        var hash: UInt64 = 0xcbf29ce484222325
+        for byte in key.utf8 {
+            hash ^= UInt64(byte)
+            hash = hash &* 0x100000001b3
+        }
+        return Double(hash & 0xFFFFFFFF) / Double(0xFFFFFFFF)
+    }
+
     /// A default daily schedule per occupation -- work hours at home, sleep, and an eat block --
     /// so named roster NPCs aren't just static home/faction data. DHAgentBrain.tick(hour:threat:)
     /// already reads a schedule; roster entries previously never had one, so no roster NPC ever
@@ -126,6 +139,47 @@ public enum DHProductionNPCRoster {
         case .scavenger: return "Found some things. Might sell 'em."
         case .railWorker: return "Tracks don't fix themselves."
         }
+    }
+
+    /// A skin tone and occupation-flavored cloth color for a roster entry, meant to be applied as
+    /// a material tint on the single shared mannequin rig (Mannequin_WalkCycle.usdz/
+    /// Mannequin_Idle.usdz) rather than requiring a distinct mesh per NPC -- one rig with real
+    /// per-individual material variation, matching what Docs/ASSET_COMMISSIONING_BRIEF.md's
+    /// Characters section asks for as the v1 bar. Both components are deterministic (from the
+    /// entry's stable string id, not its derived EntityID) so the same NPC always looks the same
+    /// across app launches. Skin tone is drawn from a small human-range palette; cloth color
+    /// starts from an occupation-appropriate base (a mechanic isn't dressed like a trader) and is
+    /// individually jittered so two NPCs sharing an occupation don't render identically.
+    public static func appearance(for entry: (id: String, name: String, occupation: Occupation, home: BlackridgeSite, faction: Faction?)) -> (skinTone: (r: Double, g: Double, b: Double), clothColor: (r: Double, g: Double, b: Double)) {
+        let individualHash = unitHash(entry.id)
+        let skinPalette: [(Double, Double, Double)] = [
+            (0.87, 0.72, 0.60), (0.76, 0.58, 0.45), (0.62, 0.45, 0.33),
+            (0.48, 0.33, 0.22), (0.36, 0.24, 0.16), (0.93, 0.80, 0.69),
+        ]
+        let skinIndex = Int(individualHash * Double(skinPalette.count)) % skinPalette.count
+        let skinTone = skinPalette[skinIndex]
+
+        let clothBase: (Double, Double, Double)
+        switch entry.occupation {
+        case .mechanic, .scavenger, .railWorker: clothBase = (0.16, 0.17, 0.20)   // oil-stained navy/grey coveralls
+        case .trader, .courier, .gambler: clothBase = (0.42, 0.28, 0.14)          // warm brown trade coat
+        case .fuelDealer: clothBase = (0.30, 0.20, 0.10)
+        case .bountyHunter, .mercenary, .guard: clothBase = (0.22, 0.20, 0.15)     // dusty tactical drab
+        case .farmer: clothBase = (0.24, 0.30, 0.16)                              // earthy green
+        case .sexWorker: clothBase = (0.45, 0.12, 0.22)
+        case .doctor: clothBase = (0.75, 0.75, 0.72)                              // clinical off-white
+        case .refugee, .thief: clothBase = (0.30, 0.28, 0.25)
+        }
+        // per-individual jitter so occupation-mates aren't identical -- derived from a second,
+        // independent hash so it doesn't correlate with the skin-tone pick above.
+        let jitterHash = unitHash(entry.id + ".cloth")
+        let jitter = (jitterHash - 0.5) * 0.12
+        let clothColor = (
+            min(1, max(0, clothBase.0 + jitter)),
+            min(1, max(0, clothBase.1 + jitter)),
+            min(1, max(0, clothBase.2 + jitter))
+        )
+        return (skinTone, clothColor)
     }
 }
 

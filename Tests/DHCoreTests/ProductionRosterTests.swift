@@ -59,6 +59,51 @@ import Testing
     #expect(brain.activity == .work)
 }
 
+@Test func everyRosterNPCHasAnAppearanceWithValidColorComponents() {
+    for entry in DHProductionNPCRoster.entries {
+        let appearance = DHProductionNPCRoster.appearance(for: entry)
+        for component in [appearance.skinTone.r, appearance.skinTone.g, appearance.skinTone.b, appearance.clothColor.r, appearance.clothColor.g, appearance.clothColor.b] {
+            #expect(component >= 0 && component <= 1, "color component out of range for \(entry.id)")
+        }
+    }
+}
+
+@Test func appearanceIsDeterministicAcrossCalls() {
+    let entry = DHProductionNPCRoster.entries[0]
+    let first = DHProductionNPCRoster.appearance(for: entry)
+    let second = DHProductionNPCRoster.appearance(for: entry)
+    #expect(first.skinTone == second.skinTone)
+    #expect(first.clothColor == second.clothColor)
+}
+
+@Test func rosterHasGenuineSkinToneAndClothColorVariety() {
+    let appearances = DHProductionNPCRoster.entries.map(DHProductionNPCRoster.appearance(for:))
+    let distinctSkinTones = Set(appearances.map { "\($0.skinTone.r),\($0.skinTone.g),\($0.skinTone.b)" })
+    let distinctClothColors = Set(appearances.map { "\($0.clothColor.r),\($0.clothColor.g),\($0.clothColor.b)" })
+    #expect(distinctSkinTones.count > 1, "all 20 NPCs got the same skin tone")
+    #expect(distinctClothColors.count > 1, "all 20 NPCs got the same cloth color")
+}
+
+@Test func npcsSharingAnOccupationAreNotVisuallyIdentical() {
+    let byOccupation = Dictionary(grouping: DHProductionNPCRoster.entries, by: \.occupation)
+    var foundAVariedPair = false
+    for (_, entries) in byOccupation where entries.count > 1 {
+        let appearances = entries.map(DHProductionNPCRoster.appearance(for:))
+        let distinct = Set(appearances.map { "\($0.clothColor.r),\($0.clothColor.g),\($0.clothColor.b)" })
+        if distinct.count > 1 { foundAVariedPair = true }
+    }
+    #expect(foundAVariedPair, "every occupation-sharing pair rendered with identical cloth color")
+}
+
+@Test func doctorsClothColorReadsClinicalWhiteRatherThanMechanicNavy() {
+    let doctor = DHProductionNPCRoster.entries.first { $0.occupation == .doctor }!
+    let mechanic = DHProductionNPCRoster.entries.first { $0.occupation == .mechanic }!
+    let doctorColor = DHProductionNPCRoster.appearance(for: doctor).clothColor
+    let mechanicColor = DHProductionNPCRoster.appearance(for: mechanic).clothColor
+    #expect(doctorColor.r > 0.5, "doctor's cloth should read light/clinical, not dark")
+    #expect(mechanicColor.r < 0.4, "mechanic's cloth should read dark/oil-stained")
+}
+
 @Test func everyRosterNPCHasNonEmptyDialogueIncludingAGreeting() {
     for entry in DHProductionNPCRoster.entries {
         let options = DHProductionNPCRoster.defaultDialogue(for: entry)
