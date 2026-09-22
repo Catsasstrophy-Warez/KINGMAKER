@@ -47,6 +47,7 @@ subsystem across its files.
 | `Rev10SliceCoordinator.swift` | Coordinates inspection/repair/streaming/radio for the Rev10 slice |
 | `Rev10SaveDocument.swift` | Versioned save document wrapper (schema version + slice) |
 | `VehicleEncounterRuntime.swift` | Hostile vehicle encounter phase state machine |
+| `ProductionRoster.swift` | Named NPC/vehicle roster (`DHProductionNPCRoster`, `DHProductionVehicleRoster`) |
 
 ## DHPresentation — RealityKit/UI layer (largest module)
 
@@ -66,7 +67,9 @@ subsystem across its files.
 | `Rev10ProductionContracts.swift` | Rev10 production data contracts |
 | `Rev10RuntimePresentation.swift` | Rev10 runtime presentation state |
 | `Rev10RealityKitScene.swift` | Rev10 RealityKit scene bridge (largest single file) |
-| `Resources/` | Bundled assets — currently `Kingmaker_XR13.usdz` (see `Docs/KINGMAKER_XR13_ASSET_PIPELINE.md`) |
+| `Rev10ParticleEffects.swift` | RealityKit `ParticleEmitterComponent` VFX (dust, collision debris, heat haze) |
+| `Rev10AudioPlayback.swift` | `AVAudioPlayer`-backed playback for engine mix and one-shot cues |
+| `Resources/` | Bundled assets — vehicle/garage/road/interior/terrain/prop USDZ meshes, engine/radio audio stems, the mannequin walk-cycle rig, and navmesh/animation/particle-FX data files (see `Docs/KINGMAKER_XR13_ASSET_PIPELINE.md`) |
 
 ## Everything else
 

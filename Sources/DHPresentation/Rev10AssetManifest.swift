@@ -16,6 +16,9 @@ public enum DHRev10AssetManifest {
         .init(id: "blackridge.road", kind: .mesh, stableEntityID: "road.segment.blackridge", sourceName: "BlackridgeRoadSegment.usdz"),
         .init(id: "paradise.interior", kind: .mesh, stableEntityID: "chunk.paradiseInterior", sourceName: "ParadiseInterior.usdz"),
         .init(id: "kingmaker.mesh", kind: .mesh, stableEntityID: "kingmaker", sourceName: "Kingmaker_XR13.usdz"),
+        .init(id: "kingmaker.repaired", kind: .mesh, stableEntityID: "kingmaker", sourceName: "Kingmaker_XR13_repaired.usdz", required: false),
+        .init(id: "kingmaker.damaged", kind: .mesh, stableEntityID: "kingmaker", sourceName: "Kingmaker_XR13_damaged.usdz", required: false),
+        .init(id: "kingmaker.rusted", kind: .mesh, stableEntityID: "kingmaker", sourceName: "Kingmaker_XR13_rusted.usdz", required: false),
         .init(id: "kingmaker.enginebay", kind: .mesh, stableEntityID: "kingmaker.engineBay", sourceName: "Kingmaker_EngineBay.usdz"),
         .init(id: "player.navmesh", kind: .navmesh, stableEntityID: "chunk.garage", sourceName: "BlackridgeGarage.navmesh"),
         .init(id: "blackridge.terrain", kind: .mesh, stableEntityID: "chunk.paradise", sourceName: "BlackridgeCounty_Terrain.usdz"),
@@ -30,6 +33,16 @@ public enum DHRev10AssetManifest {
         , .init(id: "engine.supercharger", kind: .audio, stableEntityID: "kingmaker.engineBay", sourceName: "XR13_Supercharger_Loop.wav")
         , .init(id: "transmission.shift", kind: .audio, stableEntityID: "kingmaker.driveline", sourceName: "XR13_DCT_Shift.wav")
         , .init(id: "dashboard.warning", kind: .mesh, stableEntityID: "kingmaker.dashboard", sourceName: "XR13_Dashboard.usdz")
+        , .init(id: "cue.engineCrank", kind: .audio, stableEntityID: "kingmaker.engineBay", sourceName: "Kingmaker_Crank.wav")
+        , .init(id: "cue.engineStart", kind: .audio, stableEntityID: "kingmaker.engineBay", sourceName: "Kingmaker_EngineStart.wav")
+        , .init(id: "cue.engineKnock", kind: .audio, stableEntityID: "kingmaker.engineBay", sourceName: "Kingmaker_EngineKnock.wav")
+        , .init(id: "cue.repair", kind: .audio, stableEntityID: "player", sourceName: "Repair_ToolClink.wav")
+        , .init(id: "cue.lootOpen", kind: .audio, stableEntityID: "player", sourceName: "Loot_Open.wav")
+        , .init(id: "cue.lootCollect", kind: .audio, stableEntityID: "player", sourceName: "Loot_Collect.wav")
+        , .init(id: "cue.hostileTelegraph", kind: .audio, stableEntityID: "encounter.north-road", sourceName: "Hostile_Telegraph.wav")
+        , .init(id: "cue.hostileAttack", kind: .audio, stableEntityID: "encounter.north-road", sourceName: "Hostile_Attack.wav")
+        , .init(id: "cue.paradiseNegotiation", kind: .audio, stableEntityID: "chunk.paradiseInterior", sourceName: "Paradise_Negotiation.wav")
+        , .init(id: "radio.static", kind: .audio, stableEntityID: "radio", sourceName: "Radio_Static.wav")
     ]
     public static func bindings(for kind: DHRev10AssetKind) -> [DHRev10AssetBinding] { bindings.filter { $0.kind == kind } }
 }

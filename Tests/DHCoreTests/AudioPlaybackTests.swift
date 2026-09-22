@@ -25,8 +25,24 @@ import Testing
 }
 
 @available(iOS 18.0, macOS 15.0, *)
+@Test @MainActor func allRequiredAudioCuesHaveABoundStemThatPlays() {
+    let player = DHRev10AudioPlayer()
+    for cue in DHRev10ProductionContract.requiredAudio {
+        var audio = DHRev10AudioState()
+        audio.trigger(cue)
+        player.drain(&audio)
+        #expect(audio.activeCues.isEmpty, "\(cue) was not drained")
+    }
+    player.stopAll()
+}
+
+@available(iOS 18.0, macOS 15.0, *)
 @Test func placeholderAudioStemsResolveFromTheBundle() {
-    let engineBindingIDs = ["engine.exhaust", "engine.valvetrain", "engine.supercharger", "transmission.shift", "radio.consequence"]
+    let engineBindingIDs = [
+        "engine.exhaust", "engine.valvetrain", "engine.supercharger", "transmission.shift", "radio.consequence",
+        "cue.engineCrank", "cue.engineStart", "cue.engineKnock", "cue.repair", "cue.lootOpen", "cue.lootCollect",
+        "cue.hostileTelegraph", "cue.hostileAttack", "cue.paradiseNegotiation", "radio.static",
+    ]
     for id in engineBindingIDs {
         let binding = DHRev10AssetManifest.bindings.first { $0.id == id }
         #expect(binding != nil, "missing manifest binding for \(id)")

@@ -94,11 +94,110 @@ def static_burst(duration):
     return samples
 
 
+def starter_crank(duration, cycle_hz=3.5):
+    """Rhythmic starter-motor clunk-whine, the sound of the engine turning over before it catches."""
+    n = int(duration * SAMPLE_RATE)
+    samples = []
+    for i in range(n):
+        t = i / SAMPLE_RATE
+        cycle_phase = (t * cycle_hz) % 1.0
+        pulse = 1.0 if cycle_phase < 0.35 else 0.0
+        whine_v = 0.3 * math.sin(2 * math.pi * 80 * t) * pulse
+        clank = (random.random() * 2 - 1) * 0.15 * pulse
+        samples.append(whine_v + clank)
+    return samples
+
+
+def catch_and_settle(duration):
+    """Engine catching: a rising whine that resolves into a steady idle rumble."""
+    n = int(duration * SAMPLE_RATE)
+    samples = []
+    for i in range(n):
+        t = i / SAMPLE_RATE
+        catch_progress = min(1.0, t / (duration * 0.4))
+        freq = 60 + 140 * catch_progress
+        rumble = 0.5 * math.sin(2 * math.pi * freq * t)
+        settle = 0.2 * math.sin(2 * math.pi * 42 * t) * min(1.0, t / duration)
+        noise = (random.random() * 2 - 1) * 0.06
+        samples.append(rumble * (1 - catch_progress * 0.5) + settle + noise)
+    return samples
+
+
+def metal_knock(duration):
+    """A single sharp metallic knock -- a fault/detonation cue, distinct from the softer clunk()."""
+    n = int(duration * SAMPLE_RATE)
+    samples = []
+    for i in range(n):
+        t = i / SAMPLE_RATE
+        decay = math.exp(-t * 40)
+        v = decay * (0.7 * math.sin(2 * math.pi * 420 * t) + 0.3 * (random.random() * 2 - 1))
+        samples.append(v)
+    return samples
+
+
+def chime(duration, base_freq, overtone_ratio=2.0):
+    """A short bell-like tone for UI feedback (loot open/collect)."""
+    n = int(duration * SAMPLE_RATE)
+    samples = []
+    for i in range(n):
+        t = i / SAMPLE_RATE
+        decay = math.exp(-t * 6)
+        v = decay * (0.6 * math.sin(2 * math.pi * base_freq * t) + 0.3 * math.sin(2 * math.pi * base_freq * overtone_ratio * t))
+        samples.append(v)
+    return samples
+
+
+def tension_rise(duration):
+    """A slow rising drone for a hostile-encounter telegraph cue."""
+    n = int(duration * SAMPLE_RATE)
+    samples = []
+    for i in range(n):
+        t = i / SAMPLE_RATE
+        freq = 55 + 25 * (t / duration)
+        v = 0.4 * math.sin(2 * math.pi * freq * t) + 0.08 * (random.random() * 2 - 1)
+        samples.append(v)
+    return samples
+
+
+def impact_burst(duration):
+    """A short sharp impact for a hostile-attack hit cue -- noise burst layered over a low thud."""
+    n = int(duration * SAMPLE_RATE)
+    samples = []
+    for i in range(n):
+        t = i / SAMPLE_RATE
+        decay = math.exp(-t * 22)
+        thud = decay * 0.6 * math.sin(2 * math.pi * 65 * t)
+        noise = decay * 0.5 * (random.random() * 2 - 1)
+        samples.append(thud + noise)
+    return samples
+
+
+def soft_murmur(duration):
+    """A low ambient tone bed for the Paradise-negotiation dialogue cue (room tone, not dialogue)."""
+    n = int(duration * SAMPLE_RATE)
+    samples = []
+    for i in range(n):
+        t = i / SAMPLE_RATE
+        v = 0.15 * math.sin(2 * math.pi * 130 * t) + 0.08 * math.sin(2 * math.pi * 196 * t)
+        v += 0.02 * (random.random() * 2 - 1)
+        samples.append(v)
+    return samples
+
+
 stems = {
     "XR13_Exhaust_Loop.wav": fade(engine_rumble(2.0, 42, [1.0, 0.5, 0.3, 0.15], 0.08)),
     "XR13_Valvetrain_Loop.wav": fade(engine_rumble(1.0, 110, [0.6, 0.4, 0.5, 0.2], 0.15)),
     "XR13_Supercharger_Loop.wav": fade(whine(1.5, 220, 40)),
     "XR13_DCT_Shift.wav": fade(clunk(0.4), in_s=0.001, out_s=0.1),
+    "Kingmaker_Crank.wav": fade(starter_crank(1.6), in_s=0.01, out_s=0.05),
+    "Kingmaker_EngineStart.wav": fade(catch_and_settle(1.8), in_s=0.01, out_s=0.1),
+    "Kingmaker_EngineKnock.wav": fade(metal_knock(0.3), in_s=0.001, out_s=0.08),
+    "Repair_ToolClink.wav": fade(clunk(0.25), in_s=0.001, out_s=0.06),
+    "Loot_Open.wav": fade(chime(0.6, 440), in_s=0.001, out_s=0.1),
+    "Loot_Collect.wav": fade(chime(0.35, 660, overtone_ratio=1.5), in_s=0.001, out_s=0.06),
+    "Hostile_Telegraph.wav": fade(tension_rise(1.5), in_s=0.05, out_s=0.05),
+    "Hostile_Attack.wav": fade(impact_burst(0.4), in_s=0.001, out_s=0.08),
+    "Paradise_Negotiation.wav": fade(soft_murmur(1.6), in_s=0.1, out_s=0.15),
 }
 
 for name, samples in stems.items():
@@ -120,3 +219,9 @@ except (FileNotFoundError, subprocess.CalledProcessError) as e:
 finally:
     if os.path.exists(radio_wav):
         os.remove(radio_wav)
+
+# radio.static: a shorter, un-transcoded static burst for the ambient/tuning cue (radioConsequence
+# above is the "a broadcast just happened" one-shot; this is the idle scan/interference loop).
+static_path = os.path.join(OUT, "Radio_Static.wav")
+write_wav(static_path, fade(static_burst(0.9), in_s=0.02, out_s=0.1))
+print("WROTE", static_path)

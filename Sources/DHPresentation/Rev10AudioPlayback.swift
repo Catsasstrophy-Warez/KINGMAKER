@@ -78,12 +78,21 @@ public final class DHRev10AudioPlayer {
         return DHRev10AssetResolver.url(for: binding)
     }
 
-    /// Not every DHRev10AudioCue has a bound asset yet (engineCrank/engineKnock/repair/lootOpen/
-    /// lootCollect/hostileTelegraph/hostileAttack/paradiseNegotiation are still contract-only,
-    /// per Rev10ProductionContracts.swift's requiredAudio list) -- only radioConsequence and
-    /// radioStatic currently resolve to real synthesized audio.
+    /// Every DHRev10AudioCue in Rev10ProductionContracts.swift's requiredAudio list, plus
+    /// engineKnock/lootCollect/hostileTelegraph/radioStatic, now resolves to a real synthesized
+    /// stem (see Tools/BlenderAssetGen/build_audio.py). engineStart is deliberately unmapped here:
+    /// it's driven by updateEngineMix's loop-volume ramp, not a one-shot cue.
     private static let cueBindings: [DHRev10AudioCue: String] = [
-        .radioConsequence: "radio.consequence"
+        .engineCrank: "cue.engineCrank",
+        .engineKnock: "cue.engineKnock",
+        .repair: "cue.repair",
+        .lootOpen: "cue.lootOpen",
+        .lootCollect: "cue.lootCollect",
+        .hostileTelegraph: "cue.hostileTelegraph",
+        .hostileAttack: "cue.hostileAttack",
+        .paradiseNegotiation: "cue.paradiseNegotiation",
+        .radioStatic: "radio.static",
+        .radioConsequence: "radio.consequence",
     ]
 }
 #endif
