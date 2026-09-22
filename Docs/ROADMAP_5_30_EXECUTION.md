@@ -11,11 +11,19 @@ a physical device, or credentials outside this checkout.
 | 8–13 | Persistent session document, vehicle transform/HUD sync, async USDZ loading, camera modes, collision components, and mechanical tick wiring added |
 | 14–16 | Navigation graph, repair runtime, collision damage state, vehicle encounter combat, radio consequence, and loot controls added |
 | 17–18 | Session save now persists slice, coordinator, movement, camera, trade, repair, and loot state; coordinator is the active presentation bridge |
-| 19 | Textured procedural blockout remains bundled; final authored materials, meshes, damage variants, and animations are an external art gate |
+| 19 | Textured procedural blockout, Kingmaker damage variants, and animation bindings are bundled; final authored hero materials, meshes, and animation polish remain an external art gate |
 | 20 | Simulator build/launch verified; physical-device signing, thermal, memory, performance, accessibility, and release QA remain external gates |
 
-Current verification: 105 SwiftPM tests pass, the iOS Simulator target builds
-successfully, the app launches on an iPhone simulator, and the USDZ contract
-validator passes. The simulator still visibly uses diagnostic world geometry
-around the loaded vehicle; replacing that environment with production terrain
-and garage art is intentionally not represented as complete here.
+The runtime now uses a fixed-step accumulator for vehicle stepping, stable
+navigation ordering, explicit collision layers, and a chunk reconciliation
+API. These are simulation/presentation foundations. Since the prior update,
+a navmesh data file, animation-clip sampling, 15 real audio stems, weather/
+combat particle FX, a spawnable named NPC/vehicle roster, and a second
+interior have all moved from contract-only to built and tested; authored
+(not procedural) terrain, final production art, and physical-device
+validation remain external production gates.
+
+Current verification: 177 SwiftPM tests pass, the iOS Simulator target builds
+successfully, and the USDZ contract validator passes. Simulator launch and
+interactive UI validation remain blocked in this environment while the
+CoreSimulator service is unavailable.
