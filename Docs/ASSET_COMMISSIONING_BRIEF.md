@@ -89,9 +89,12 @@ Paradise negotiation), and radio (consequence broadcast, static). Format: `.wav`
 
 ## Lighting
 
-No environment/IBL lighting exists yet — everything renders against a flat background color. This
-is a real gap an artist or lighting pass needs to close (an earlier attempt at a lit studio-panel
-environment blew out the paint's exposure and was reverted rather than shipped broken).
+Real environment/IBL lighting now exists (`Rev10RealityKitScene.buildEnvironmentLighting()`), a
+conservative procedural sky gradient rather than a bright reflective one. Room to grow: swap the
+procedural gradient for an authored HDRI once one exists, and re-tune `intensityExponent` upward
+once verified on-device (a real earlier attempt at a lit studio-panel environment *in the Blender
+preview renderer* — a different system, no exposure control — blew out the paint's exposure and
+was reverted; that's the caution this stayed conservative against).
 
 ## Technical constraints (hard limits, checked by CI)
 
@@ -119,7 +122,13 @@ needs to be a visual/audio replacement, not a functional one.
       metallic/roughness/clearcoat values: repaired is glossy and near-flawless, damaged is matte
       with heavy scratches/grime and occasional bare-metal glints, rusted has a dedicated
       streaked/pitted corrosion texture with no clearcoat. wasteland (the default) is unchanged.
-- [ ] Environment/IBL lighting pass
+- [x] Environment/IBL lighting pass — real `ImageBasedLightComponent`/`ImageBasedLightReceiverComponent`
+      (RealityFoundation, not the ARView-scoped legacy API) with a procedural desaturated
+      overcast-wasteland sky gradient, deliberately dim (`intensityExponent: -0.4`) to start
+      conservative rather than repeat the earlier Blender-preview exposure blowout (a different
+      rendering system; documented in the code as not directly transferable, but the caution
+      still applied). Every material now receives real ambient/reflective lighting instead of
+      only a single directional light against a flat background.
 - [ ] Real audio to replace the 15 synthesized placeholder stems
 - [ ] Second animation clip (idle) for the mannequin rig
 - [ ] Unique per-NPC material variation across the 20-entry roster
