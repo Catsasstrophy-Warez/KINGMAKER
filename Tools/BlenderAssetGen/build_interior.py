@@ -146,8 +146,42 @@ def truck_stop_interior():
     return root
 
 
+def town_interior():
+    # A collapsed general store -- the fourth interior beyond a data contract
+    # (BlackridgeSite/BlackridgeLocationKind.town, matching the "collapsed-store" diagnostic prop
+    # already referenced in Rev10RealityKitScene.swift's diagnosticProps(for:)). Deliberately
+    # ruined rather than a working room like the other three: partial roof collapse with visible
+    # rubble, a toppled checkout counter, and broken shelving, not a tidy interior.
+    root = empty("TownInterior_Assembly")
+    cube("town_floor", (11, 9, 0.15), (0, 0, -0.075), PLASTER, root)
+    cube("town_back_wall", (11, 0.2, 3.4), (0, 4.5, 1.7), PLASTER, root)
+    cube("town_left_wall", (0.2, 9, 3.4), (-5.5, 0, 1.7), PLASTER, root)
+    cube("town_right_wall_stub", (0.2, 4, 3.4), (5.5, -2.5, 1.7), PLASTER, root)
+
+    # partial roof collapse: one intact beam, one snapped and angled down into the rubble below
+    cube("roof_beam_intact", (11, 0.2, 0.2), (0, -2, 3.3), METAL, root)
+    cube("roof_beam_collapsed", (6, 0.2, 0.2), (2.5, 3, 2.0), METAL, root)
+    for x, y, s in [(2.0, 2.6, 0.5), (3.2, 3.4, 0.4), (1.4, 3.8, 0.35), (2.8, 2.2, 0.3)]:
+        cube("rubble_%s_%s" % (x, y), (s, s, s * 0.6), (x, y, s * 0.3), PLASTER, root, 0.02)
+
+    # toppled checkout counter, on its side rather than standing
+    cube("checkout_counter", (2.4, 0.7, 0.9), (-2.5, 3.5, 0.45), WOOD, root, 0.02)
+    cylinder("checkout_register", 0.18, 0.22, (-2.5, 3.5, 0.9), METAL, vertices=12, parent=root)
+
+    # broken shelving, some still upright, one fallen
+    for x in (-4.2, -4.2):
+        cube("shelf_standing", (0.5, 1.8, 2.2), (x, -2.5, 1.1), METAL, root, 0.02)
+    cube("shelf_fallen", (0.5, 1.8, 2.0), (1.5, -1.5, 0.25), METAL, root)
+
+    cube("boarded_window", (1.8, 0.1, 1.3), (5.4, 0.5, 1.6), WOOD, root)
+    cube("doorway_gap_frame", (0.2, 0.2, 2.3), (-5.4, 4.4, 1.15), METAL, root)
+
+    return root
+
+
 interior_root = paradise_interior()
 truckstop_root = truck_stop_interior()
+town_root = town_interior()
 for o in bpy.context.scene.objects:
     if o.type == 'MESH':
         bpy.context.view_layer.objects.active = o
@@ -172,3 +206,4 @@ def export(root, name):
 
 export(interior_root, "ParadiseInterior")
 export(truckstop_root, "TruckStopInterior")
+export(town_root, "TownInterior")

@@ -9,6 +9,14 @@ import Testing
     #expect(DHRev10AssetResolver.missingRequiredBindings.isEmpty, "missing: \(DHRev10AssetResolver.missingRequiredBindings.map(\.id))")
 }
 
+@Test func kingmakerConditionVariantsResolveWhenBundled() {
+    for id in ["kingmaker.repaired", "kingmaker.damaged", "kingmaker.rusted"] {
+        let binding = DHRev10AssetManifest.bindings.first { $0.id == id }
+        #expect(binding != nil, "missing manifest binding: \(id)")
+        #expect(binding.flatMap(DHRev10AssetResolver.url(for:)) != nil, "missing bundled variant: \(id)")
+    }
+}
+
 @Test func garageNavmeshBindingResolvesToValidJSON() throws {
     let binding = try #require(DHRev10AssetManifest.bindings.first { $0.id == "player.navmesh" })
     let url = try #require(DHRev10AssetResolver.url(for: binding))
@@ -30,6 +38,12 @@ import Testing
 
 @Test func truckStopInteriorBindingResolves() throws {
     let binding = try #require(DHRev10AssetManifest.bindings.first { $0.id == "truckstop.interior" })
+    let url = try #require(DHRev10AssetResolver.url(for: binding))
+    #expect(try Data(contentsOf: url).count > 1000)
+}
+
+@Test func townInteriorBindingResolves() throws {
+    let binding = try #require(DHRev10AssetManifest.bindings.first { $0.id == "town.interior" })
     let url = try #require(DHRev10AssetResolver.url(for: binding))
     #expect(try Data(contentsOf: url).count > 1000)
 }

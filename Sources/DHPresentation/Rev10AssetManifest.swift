@@ -16,6 +16,7 @@ public enum DHRev10AssetManifest {
         .init(id: "blackridge.road", kind: .mesh, stableEntityID: "road.segment.blackridge", sourceName: "BlackridgeRoadSegment.usdz"),
         .init(id: "paradise.interior", kind: .mesh, stableEntityID: "chunk.paradiseInterior", sourceName: "ParadiseInterior.usdz"),
         .init(id: "truckstop.interior", kind: .mesh, stableEntityID: "chunk.truckStopInterior", sourceName: "TruckStopInterior.usdz"),
+        .init(id: "town.interior", kind: .mesh, stableEntityID: "chunk.townInterior", sourceName: "TownInterior.usdz"),
         .init(id: "kingmaker.mesh", kind: .mesh, stableEntityID: "kingmaker", sourceName: "Kingmaker_XR13.usdz"),
         .init(id: "kingmaker.repaired", kind: .mesh, stableEntityID: "kingmaker", sourceName: "Kingmaker_XR13_repaired.usdz", required: false),
         .init(id: "kingmaker.damaged", kind: .mesh, stableEntityID: "kingmaker", sourceName: "Kingmaker_XR13_damaged.usdz", required: false),
