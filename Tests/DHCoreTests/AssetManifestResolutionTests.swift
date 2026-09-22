@@ -28,6 +28,12 @@ import Testing
     }
 }
 
+@Test func truckStopInteriorBindingResolves() throws {
+    let binding = try #require(DHRev10AssetManifest.bindings.first { $0.id == "truckstop.interior" })
+    let url = try #require(DHRev10AssetResolver.url(for: binding))
+    #expect(try Data(contentsOf: url).count > 1000)
+}
+
 @Test func combatFXBindingResolvesToNonEmptyUSDA() throws {
     let binding = try #require(DHRev10AssetManifest.bindings.first { $0.id == "combat.fx" })
     let url = try #require(DHRev10AssetResolver.url(for: binding))

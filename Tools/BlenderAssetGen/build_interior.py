@@ -114,7 +114,40 @@ def paradise_interior():
     return root
 
 
+def truck_stop_interior():
+    # A roadside diner/fuel counter: counter, stools, a short aisle of shelving, and a fuel-pump
+    # console visible through a front window opening -- the second interior beyond a data
+    # contract (BlackridgeSite.truckStop), reusing the same trading-hall proportions/materials
+    # as paradise_interior() rather than inventing a new visual language.
+    root = empty("TruckStopInterior_Assembly")
+    cube("truckstop_floor", (10, 8, 0.15), (0, 0, -0.075), METAL, root)
+    cube("truckstop_back_wall", (10, 0.2, 3.6), (0, 4, 1.8), PLASTER, root)
+    cube("truckstop_left_wall", (0.2, 8, 3.6), (-5, 0, 1.8), PLASTER, root)
+    cube("truckstop_right_wall", (0.2, 8, 3.6), (5, 0, 1.8), PLASTER, root)
+    cube("truckstop_ceiling_beam", (10, 0.2, 0.22), (0, 0, 3.5), METAL, root)
+
+    cube("diner_counter", (4.2, 0.7, 1.0), (-1.0, 1.2, 0.5), METAL, root, 0.03)
+    cube("diner_counter_top", (4.4, 0.8, 0.06), (-1.0, 1.2, 1.0), WOOD, root, 0.02)
+    for x in (-2.4, -1.4, -0.4, 0.6):
+        cylinder("diner_stool_%s" % x, 0.16, 0.5, (x, 2.0, 0.25), METAL, vertices=12, parent=root)
+
+    for x in (2.6, 3.4):
+        cube("shelf_unit_%s" % x, (0.6, 1.6, 1.8), (x, -2.0, 0.9), METAL, root, 0.02)
+
+    cube("fuel_console", (1.0, 0.5, 1.1), (3.2, 2.6, 0.55), METAL, root, 0.03)
+    cylinder("fuel_console_light", 0.08, 0.1, (3.2, 2.6, 1.15), LAMP, vertices=12, parent=root)
+
+    cube("window_frame", (3.0, 0.15, 1.6), (2.0, -3.9, 1.9), METAL, root)
+    cube("front_door_frame", (0.9, 0.15, 2.2), (-3.0, -3.9, 1.1), METAL, root)
+
+    for x in (-3.5, 0, 3.5):
+        cylinder("truckstop_lamp_%s" % x, 0.2, 0.16, (x, 0, 3.3), LAMP, vertices=16, parent=root)
+
+    return root
+
+
 interior_root = paradise_interior()
+truckstop_root = truck_stop_interior()
 for o in bpy.context.scene.objects:
     if o.type == 'MESH':
         bpy.context.view_layer.objects.active = o
@@ -138,3 +171,4 @@ def export(root, name):
 
 
 export(interior_root, "ParadiseInterior")
+export(truckstop_root, "TruckStopInterior")
