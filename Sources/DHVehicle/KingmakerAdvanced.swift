@@ -17,10 +17,8 @@ public struct ElectricalState: Codable, Sendable, Equatable { public var battery
  public func crank() -> (voltage:Double,current:Double,drop:Double) { let total=max(0.001,batteryInternalR+starterCableR+groundR+starterR); let i=batteryOpenCircuitV/total; let drop=i*(starterCableR+groundR); return (max(0,batteryOpenCircuitV-i*batteryInternalR-drop),i,drop) }
  public func chargingVoltage(rpm:Double)->Double { rpm > 700 ? min(14.7,13.6 + rpm/10000) : batteryOpenCircuitV }
 }
-public struct FluidCircuit: Codable, Sendable, Equatable { public var capacity:Double; public var quantity:Double; public var leakPerSecond:Double; public var pumpEfficiency:Double; public mutating func step(_ dt:Double){quantity=max(0,quantity-leakPerSecond*dt)}; public var fill:Double { capacity > 0 ? quantity/capacity:0 } }
 public struct DrivetrainState: Codable, Sendable, Equatable { public var engineTorqueNm=0.0; public var gearRatio=2.66; public var finalDrive=3.73; public var drivelineEfficiency=0.88; public var wheelRadiusM=0.34; public var speedMPS=0.0; public var massKg=1850.0
  public mutating func step(throttle:Double,grip:Double,dt:Double){ engineTorqueNm=max(0,min(1,throttle))*950; let force=min(engineTorqueNm*gearRatio*finalDrive*drivelineEfficiency/wheelRadiusM, massKg*9.81*max(0,grip)); speedMPS=max(0,speedMPS+(force/massKg-0.012*speedMPS*speedMPS)*dt) }
 }
-public struct TireState: Codable, Sendable, Equatable { public var pressureKPa=220.0; public var tread=1.0; public var temperatureC=25.0; public var punctured=false; public var grip:Double { punctured ? 0.15 : max(0.25,min(1.15,(pressureKPa/220)*tread*(1-abs(75-temperatureC)/250))) } }
 public struct CollisionResult: Codable, Sendable, Equatable { public var energyJ:Double; public var chassisDamage:Double; public var suspensionDamage:Double; public var tireDamage:Double }
 public enum CollisionSolver { public static func impact(massKg:Double,speedMPS:Double,angleCos:Double)->CollisionResult { let e=0.5*massKg*speedMPS*speedMPS*max(0,min(1,abs(angleCos))); let n=min(1,e/900_000); return .init(energyJ:e,chassisDamage:n*0.55,suspensionDamage:n*0.8,tireDamage:n*0.65) } }

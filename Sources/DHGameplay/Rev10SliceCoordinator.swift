@@ -56,10 +56,9 @@ public struct DHRev10SliceCoordinator: Codable, Equatable, Sendable {
         _ = kingmaker.prepareForStart()
         playerMode = .driving
     }
-    public mutating func repairAndStart() {
-        _ = kingmaker.prepareForStart()
-        playerMode = .driving
-    }
+    /// Identical to start() -- kept as a separate name since call sites (App layer, tests) may
+    /// reference either; start() is the canonical implementation.
+    public mutating func repairAndStart() { start() }
     public mutating func resolveEncounter() { encounter.resolve(); encounterPresentation = "disabled"; radioText = "HOSTILE VEHICLE ENCOUNTER RESOLVED" }
     public mutating func recruit(_ id: String) { recruitedNPCID = id; playerMode = .dialogue }
 }

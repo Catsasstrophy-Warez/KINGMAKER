@@ -21,7 +21,6 @@ public enum KingmakerFluidNetworks {
 }
 
 public struct TransmissionState:Codable,Sendable,Equatable { public var ratios:[Double] = [2.97,2.07,1.43,1.00,0.84,0.56]; public var reverseRatio=2.90; public var selectedGear=1; public var clutchEngagement=1.0; public var finalDrive=3.73; public func activeRatio()->Double { selectedGear == 0 ? 0 : (selectedGear < 0 ? -reverseRatio : ratios[max(0,min(ratios.count-1,selectedGear-1))]) * finalDrive * max(0,min(1,clutchEngagement)) } }
-public struct WheelDynamics:Codable,Sendable,Equatable { public var wheelOmega=0.0; public var slipRatio=0.0; public mutating func step(vehicleSpeed:Double,driveTorque:Double,radius:Double,dt:Double){ let surface=max(0.1,abs(vehicleSpeed)); wheelOmega += driveTorque/2.2*dt; slipRatio=(wheelOmega*radius-vehicleSpeed)/surface; wheelOmega *= 0.995 } }
 public enum CollisionZone:String,Codable,CaseIterable,Sendable { case frontLeft,frontRight,rearLeft,rearRight,frontCenter,rearCenter,leftSide,rightSide,roof,floor }
 public struct BodyDamageState:Codable,Sendable,Equatable { public var deformation:[CollisionZone:Double]=Dictionary(uniqueKeysWithValues:CollisionZone.allCases.map{($0,0)}); public mutating func apply(zone:CollisionZone,energyJ:Double){deformation[zone,default:0]=min(1,deformation[zone,default:0]+energyJ/900_000)} }
 public struct CargoItem:Identifiable,Codable,Sendable,Equatable { public let id:EntityID; public var name:String; public var massKg:Double; public var quantity:Int }
