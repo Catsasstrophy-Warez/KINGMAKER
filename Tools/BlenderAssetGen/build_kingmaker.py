@@ -66,6 +66,70 @@ def metal_texture(xs, ys):
     b = np.clip(base, 0, 1)
     return r, g, b
 
+def paint_texture_for_state(xs, ys, state):
+    """A per-condition paint pass: repaired/damaged/rusted each get their own noise
+    characteristics (not just a different base tint reusing the same generic scratch/grime
+    amounts), so the four condition variants actually read as different paint conditions rather
+    than the same texture recolored. wasteland keeps paint_texture()'s existing tuning (the
+    original, already-shipped default look) untouched."""
+    if state == "repaired":
+        base = np.array([0.11, 0.13, 0.15])
+        noise = rng.normal(0, 0.004, xs.shape)
+        grime = np.zeros_like(xs)
+        scratch_count, scratch_intensity, scratch_width = 2, 0.035, 0.0025
+        glint_chance, glint_strength = 0.0, 0.0
+    elif state == "damaged":
+        base = np.array([0.075, 0.07, 0.065])
+        noise = rng.normal(0, 0.022, xs.shape)
+        grime = (rng.random(xs.shape) < 0.06) * rng.uniform(-0.12, -0.04, xs.shape)
+        scratch_count, scratch_intensity, scratch_width = 30, 0.22, 0.007
+        glint_chance, glint_strength = 0.012, 0.4
+    else:
+        base = np.array([0.085, 0.09, 0.10])
+        noise = rng.normal(0, 0.012, xs.shape)
+        grime = (rng.random(xs.shape) < 0.015) * rng.uniform(-0.08, -0.03, xs.shape)
+        scratch_count, scratch_intensity, scratch_width = 14, 0.14, 0.004
+        glint_chance, glint_strength = 0.0, 0.0
+
+    scratch = np.zeros_like(xs)
+    for _ in range(scratch_count):
+        cx, cy, ang, length = rng.uniform(0, 1), rng.uniform(0, 1), rng.uniform(0, math.pi), rng.uniform(0.05, 0.22)
+        dx, dy = xs - cx, ys - cy
+        along = dx * math.cos(ang) + dy * math.sin(ang)
+        perp = -dx * math.sin(ang) + dy * math.cos(ang)
+        mask = (np.abs(along) < length) & (np.abs(perp) < scratch_width)
+        scratch += mask * scratch_intensity
+    if glint_chance > 0:
+        # bright bare-metal glints where the clearcoat has chipped clean through -- distinct from
+        # a scratch (which just darkens/lightens the paint) since it should read as reflective.
+        scratch += (rng.random(xs.shape) < glint_chance) * glint_strength
+
+    v = base[:, None, None] + noise[None] + grime[None] + scratch[None]
+    v = np.clip(v, 0, 1)
+    return v[0], v[1], v[2]
+
+def rusted_body_texture(xs, ys):
+    """A dedicated corrosion texture for the rusted condition variant, replacing the previous
+    reuse of the generic trim/wheel metal_texture() (which only has a faint 2%-chance rust
+    speckle -- nowhere near enough to read as a fully rusted body). Orange-brown base with
+    streaking (rust runoff under gravity, biased vertically) and irregular pitted patches."""
+    base = np.array([0.30, 0.14, 0.055])
+    noise = rng.normal(0, 0.03, xs.shape)
+    streak = np.sin(xs * 55) * 0.02 + rng.normal(0, 0.01, xs.shape)
+    pit = (rng.random(xs.shape) < 0.15) * rng.uniform(-0.12, 0.08, xs.shape)
+    patch = np.zeros_like(xs)
+    for _ in range(12):
+        cx, cy, radius = rng.uniform(0, 1), rng.uniform(0, 1), rng.uniform(0.06, 0.22)
+        dist = np.sqrt((xs - cx) ** 2 + (ys - cy) ** 2)
+        patch += (dist < radius) * rng.uniform(-0.06, 0.12)
+    v = base[:, None, None] + noise[None] + streak[None] + pit[None] + patch[None]
+    v = np.clip(v, 0, 1)
+    # keep it dominantly orange-brown (r > g > b) even where noise pushes values around
+    r = np.clip(v[0] + 0.04, 0, 1)
+    g = np.clip(v[1], 0, 1)
+    b = np.clip(v[2] * 0.7, 0, 1)
+    return r, g, b
+
 def dark_trim_texture(xs, ys):
     noise = rng.normal(0, 0.015, xs.shape)
     v = np.clip(0.045 + noise, 0, 0.25)
@@ -100,11 +164,27 @@ def make_material(name, rgb, metallic=0.0, roughness=0.5, texture_path=None, coa
         bsdf.inputs["Coat Roughness"].default_value = coat_roughness
     return mat
 
-# dark gunmetal clearcoat paint, real clearcoat via Coat Weight/Roughness
-BODY_COLOR = {"repaired": (0.11, 0.13, 0.15), "damaged": (0.075, 0.07, 0.065), "rusted": (0.20, 0.075, 0.035), "wasteland": (0.085, 0.09, 0.10)}.get(BUILD_STATE, (0.085, 0.09, 0.10))
-BODY_TEXTURE = PATH_METAL if BUILD_STATE == "rusted" else PATH_PAINT
-MAT_BODY = make_material("XR13_Paint_" + BUILD_STATE, BODY_COLOR, metallic=0.55, roughness=0.28,
-                          texture_path=BODY_TEXTURE, coat=0.45 if BUILD_STATE == "rusted" else 1.0, coat_roughness=0.04)
+# Condition-variant material pass: each state gets its own procedural texture and PBR params
+# instead of the same generic paint/metal texture recolored. wasteland keeps the original,
+# already-shipped tex_paint look untouched; repaired/damaged/rusted each get a texture generated
+# specifically for that condition (see paint_texture_for_state/rusted_body_texture above), plus
+# metallic/roughness/clearcoat values that read as "freshly painted," "chipped and grimy," and
+# "corroded with no clearcoat left" respectively rather than only differing by base tint.
+BODY_COLOR = {"repaired": (0.11, 0.13, 0.15), "damaged": (0.075, 0.07, 0.065), "rusted": (0.30, 0.14, 0.055), "wasteland": (0.085, 0.09, 0.10)}.get(BUILD_STATE, (0.085, 0.09, 0.10))
+if BUILD_STATE == "rusted":
+    BODY_TEXTURE = save_texture("tex_body_rusted", rusted_body_texture, size=512)
+    BODY_METALLIC, BODY_ROUGHNESS, BODY_COAT = 0.12, 0.82, 0.0
+elif BUILD_STATE == "repaired":
+    BODY_TEXTURE = save_texture("tex_body_repaired", lambda xs, ys: paint_texture_for_state(xs, ys, "repaired"), size=512)
+    BODY_METALLIC, BODY_ROUGHNESS, BODY_COAT = 0.62, 0.14, 1.0
+elif BUILD_STATE == "damaged":
+    BODY_TEXTURE = save_texture("tex_body_damaged", lambda xs, ys: paint_texture_for_state(xs, ys, "damaged"), size=512)
+    BODY_METALLIC, BODY_ROUGHNESS, BODY_COAT = 0.48, 0.42, 0.35
+else:
+    BODY_TEXTURE = PATH_PAINT
+    BODY_METALLIC, BODY_ROUGHNESS, BODY_COAT = 0.55, 0.28, 1.0
+MAT_BODY = make_material("XR13_Paint_" + BUILD_STATE, BODY_COLOR, metallic=BODY_METALLIC, roughness=BODY_ROUGHNESS,
+                          texture_path=BODY_TEXTURE, coat=BODY_COAT, coat_roughness=0.04)
 MAT_GLASSHOUSE = make_material("XR13_Glasshouse", (0.02, 0.025, 0.03), metallic=0.0, roughness=0.05, coat=1.0, coat_roughness=0.02)
 MAT_WINDOW = make_material("XR13_WindowGlass", (0.008, 0.018, 0.028), metallic=0.35, roughness=0.08, coat=1.0, coat_roughness=0.02)
 MAT_DARK = make_material("XR13_Dark", (0.035, 0.035, 0.04), metallic=0.2, roughness=0.5, texture_path=PATH_DARK)

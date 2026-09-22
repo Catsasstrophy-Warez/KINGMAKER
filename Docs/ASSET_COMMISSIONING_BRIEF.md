@@ -114,7 +114,11 @@ needs to be a visual/audio replacement, not a functional one.
       still a scale-down proxy: RealityKit's public Swift API has no way to set an imported blend
       shape's weight as of this SDK (confirmed by inspecting `RealityKit.swiftinterface` directly,
       not by failing to find the right name) — the asset is ready for whenever that API exists.
-- [ ] Condition-variant material pass beyond current procedural texturing
+- [x] Condition-variant material pass — repaired/damaged/rusted each now get a texture generated
+      specifically for that condition (not the same paint/metal texture recolored), plus distinct
+      metallic/roughness/clearcoat values: repaired is glossy and near-flawless, damaged is matte
+      with heavy scratches/grime and occasional bare-metal glints, rusted has a dedicated
+      streaked/pitted corrosion texture with no clearcoat. wasteland (the default) is unchanged.
 - [ ] Environment/IBL lighting pass
 - [ ] Real audio to replace the 15 synthesized placeholder stems
 - [ ] Second animation clip (idle) for the mannequin rig
