@@ -10,14 +10,40 @@ import RealityKit
 public final class DHRev10RealityKitScene {
     public let root = Entity()
     private var anchors: [String: Entity] = [:]
+    private var kingmakerVariants: [String: Entity] = [:]
+    private var activeKingmakerVariant: String?
+    private var ambientFXEntities: [String: Entity] = [:]
+    private var interactionHighlight: Entity?
+    private var activeInteractionID: String?
+    public private(set) var loadedAssetIDs: Set<String> = []
+    public private(set) var missingAssetIDs: Set<String> = []
     private let animationLibrary = DHRev10AnimationClipLibrary()
     private let combatFXLibrary = DHRev10CombatFXLibrary()
 
     public init() { root.name = "Blackridge County Rev10" }
 
+    public func beginAssetLoadReport() {
+        loadedAssetIDs.removeAll()
+        missingAssetIDs.removeAll()
+    }
+
+    public func recordAssetLoad(_ bindingID: String, loaded: Bool) {
+        if loaded {
+            loadedAssetIDs.insert(bindingID)
+            missingAssetIDs.remove(bindingID)
+        } else if !loadedAssetIDs.contains(bindingID) {
+            missingAssetIDs.insert(bindingID)
+        }
+    }
+
     public func build(county: DHBlackridgeCounty = .verticalSlice, hierarchy: KingmakerVisualHierarchy? = nil, kingmakerSpec: KingmakerVisualSpec = .init(path: .wastelandEndurance)) {
         root.children.removeAll()
         anchors.removeAll()
+        kingmakerVariants.removeAll()
+        activeKingmakerVariant = nil
+        ambientFXEntities.removeAll()
+        interactionHighlight = nil
+        activeInteractionID = nil
         let camera = PerspectiveCamera()
         camera.name = "camera.isometric"
         camera.position = [32, 28, 36]
@@ -40,6 +66,7 @@ public final class DHRev10RealityKitScene {
             chunk.addChild(entity)
             anchors[location.id] = entity
             anchors[location.chunkID] = chunk
+            anchors["chunk.\(location.chunkID)"] = chunk
             root.addChild(chunk)
             for (propIndex, prop) in diagnosticProps(for: location.kind).enumerated() {
                 let propEntity = marker(name: "prop.\(location.id).\(prop)", size: 0.45, height: 0.7, color: .yellow)
@@ -52,6 +79,7 @@ public final class DHRev10RealityKitScene {
                 interiorEntity.isEnabled = false
                 chunk.addChild(interiorEntity)
                 anchors[interior] = interiorEntity
+                anchors["chunk.\(interior)"] = interiorEntity
             }
         }
         let player = marker(name: "player.avatar", size: 0.5, height: 1.2, color: .cyan)
@@ -65,6 +93,11 @@ public final class DHRev10RealityKitScene {
             root.addChild(roadEntity)
             anchors[road.id] = roadEntity
         }
+        let encounter = marker(name: "encounter.north-road", size: 1.8, height: 0.9, color: .red)
+        encounter.position = [18, 0.45, 4]
+        root.addChild(encounter)
+        anchors["encounter.north-road"] = encounter
+        installAmbientEffects()
         if let hierarchy {
             let kingmaker = Entity(); kingmaker.name = "vehicle.kingmaker"
             let chassis = marker(name: "kingmaker.chassis", size: 3.2, height: 0.55, color: kingmakerSpec.path == .restored ? .black : .red)
@@ -103,6 +136,7 @@ public final class DHRev10RealityKitScene {
                 let visual = marker(name: "kingmaker.\(node.id)", size: 0.22, height: 0.22, color: .red)
                 kingmaker.addChild(visual); anchors["kingmaker.\(node.id)"] = visual
             }
+            ensureKingmakerEngineBayAnchor(in: kingmaker)
             kingmaker.position = [0, 0, 0]
             anchors["kingmaker"] = kingmaker
             root.addChild(kingmaker)
@@ -111,28 +145,145 @@ public final class DHRev10RealityKitScene {
 
     public func entity(for stableID: String) -> Entity? { anchors[stableID] }
     public func replaceKingmaker(with entity: Entity) {
-        anchors["kingmaker"]?.removeFromParent()
+        installKingmaker(entity)
+    }
+    public func registerKingmakerVariant(_ entity: Entity, id: String) {
+        kingmakerVariants[id] = entity.clone(recursive: true)
+        if anchors["kingmaker"] == nil { setKingmakerVariant(id) }
+    }
+    public func setKingmakerVariant(_ id: String) {
+        guard id != activeKingmakerVariant, let source = kingmakerVariants[id] else { return }
+        installKingmaker(source.clone(recursive: true))
+        activeKingmakerVariant = id
+    }
+    private func installKingmaker(_ entity: Entity) {
+        if let current = anchors["kingmaker"] {
+            let staleIDs = anchors.compactMap { key, value in isDescendantOrSelf(value, of: current) ? key : nil }
+            for id in staleIDs { anchors.removeValue(forKey: id) }
+            current.removeFromParent()
+        }
         entity.name = "vehicle.kingmaker.asset"
         entity.components.set(CollisionComponent(shapes: [ShapeResource.generateBox(size: [4.8, 1.45, 1.95])]))
         entity.components.set(InputTargetComponent())
         anchors["kingmaker"] = entity
         root.addChild(entity)
+        ensureKingmakerEngineBayAnchor(in: entity)
     }
     public func replaceChunk(_ chunkID: String, with entity: Entity) {
-        anchors[chunkID]?.removeFromParent()
-        entity.name = "chunk.\(chunkID).asset"
+        let canonicalChunkID = chunkID.hasPrefix("chunk.") ? chunkID : "chunk.\(chunkID)"
+        let lookupID = anchors[chunkID] != nil ? chunkID : canonicalChunkID
+        guard let current = anchors[lookupID] else {
+            attach(entity, stableID: canonicalChunkID)
+            return
+        }
+        let parent = current.parent ?? root
+        let transform = current.transform
+        current.removeFromParent()
+        entity.name = "\(canonicalChunkID).asset"
+        entity.transform = transform
+        let aliases = anchors.compactMap { key, value in value === current ? key : nil }
+        for alias in aliases { anchors[alias] = entity }
         anchors[chunkID] = entity
-        root.addChild(entity)
+        parent.addChild(entity)
+        if canonicalChunkID == "chunk.garage" {
+            anchors.removeValue(forKey: "garage.authored-blockout")?.removeFromParent()
+        }
+    }
+    public func replaceAnchor(_ stableID: String, with entity: Entity) {
+        guard let current = anchors[stableID] else { attach(entity, stableID: stableID); return }
+        let parent = current.parent ?? root
+        current.removeFromParent()
+        entity.name = "\(stableID).asset"
+        anchors[stableID] = entity
+        parent.addChild(entity)
     }
     public func syncKingmaker(position: DHVector3, headingRadians: Double) {
         guard let entity = anchors["kingmaker"] else { return }
         entity.position = [Float(position.x), Float(position.y), Float(position.z)]
         entity.orientation = simd_quatf(angle: Float(headingRadians), axis: [0, 1, 0])
     }
-    public func setInterior(_ chunkID: String, visible: Bool) { anchors[chunkID]?.isEnabled = visible }
+    public func syncPlayerAvatar(position: DHVector3, headingRadians: Double, visible: Bool = true) {
+        guard let entity = anchors["player.avatar"] else { return }
+        entity.position = [Float(position.x), Float(position.y), Float(position.z)]
+        entity.orientation = simd_quatf(angle: Float(headingRadians), axis: [0, 1, 0])
+        entity.isEnabled = visible
+    }
+    /// Applies the persisted gameplay camera rig to the live RealityKit camera.
+    /// The rig stores an isometric yaw/pitch in degrees; RealityKit receives the
+    /// resulting world-space position and looks back at the active target.
+    public func syncCamera(_ rig: IsometricCameraRig, target: DHVector3) {
+        guard let camera = anchors["camera.isometric"] as? PerspectiveCamera else { return }
+        let yaw = rig.yawDegrees * .pi / 180
+        let pitch = rig.pitchDegrees * .pi / 180
+        let horizontalDistance = cos(pitch) * rig.distance
+        let offset = SIMD3<Float>(
+            Float(sin(yaw) * horizontalDistance),
+            Float(-sin(pitch) * rig.distance),
+            Float(cos(yaw) * horizontalDistance)
+        )
+        let targetPosition = SIMD3<Float>(Float(target.x), Float(target.y), Float(target.z))
+        camera.position = targetPosition + offset
+        camera.look(at: targetPosition, from: camera.position, relativeTo: root)
+    }
+    /// Marks the currently focused interaction hotspot in the live scene. The
+    /// stable entity ID is shared with the interaction catalog and HUD prompt.
+    public func syncInteractionHighlight(_ hotspot: DHRev10InteractionHotspot?) {
+        if activeInteractionID == hotspot?.id, interactionHighlight != nil { return }
+        interactionHighlight?.removeFromParent()
+        interactionHighlight = nil
+        activeInteractionID = hotspot?.id
+        guard let hotspot, let target = anchors[hotspot.stableEntityID] else { return }
+        let marker = ModelEntity(
+            mesh: .generateCylinder(height: 0.04, radius: 0.62),
+            materials: [SimpleMaterial(color: .yellow, isMetallic: false)]
+        )
+        marker.name = "interaction.highlight.\(hotspot.id)"
+        marker.position = [0, 0.12, 0]
+        target.addChild(marker)
+        interactionHighlight = marker
+    }
+    public func installAmbientEffects(budget: DHFXBudget = .init(), rainIntensity: Double = 0, fogDensity: Double = 0.12) {
+        let effects: [(String, ParticleEmitterComponent)] = [
+            ("fx.dust", DHRev10ParticleEffects.dust(budget: budget)),
+            ("fx.rain", DHRev10ParticleEffects.rain(intensity: rainIntensity, budget: budget)),
+            ("fx.ground-fog", DHRev10ParticleEffects.groundFog(density: fogDensity)),
+        ]
+        for (id, emitter) in effects {
+            let entity = ambientFXEntities[id] ?? Entity()
+            entity.name = id
+            entity.components.set(emitter)
+            if entity.parent == nil { root.addChild(entity) }
+            ambientFXEntities[id] = entity
+            anchors[id] = entity
+        }
+    }
+    public func updateAmbientEffects(speedKPH: Double, coolantC: Double, budget: DHFXBudget = .init()) {
+        guard let dust = ambientFXEntities["fx.dust"] else { return }
+        var emitter = DHRev10ParticleEffects.dust(budget: budget)
+        emitter.isEmitting = speedKPH > 2
+        dust.components.set(emitter)
+        guard let heat = anchors["kingmaker.engineBay"] else { return }
+        let heatEmitter = DHRev10ParticleEffects.heatHaze(thermalLoad: (coolantC - 85) / 35)
+        heat.components.set(heatEmitter)
+    }
+    public func setInterior(_ chunkID: String, visible: Bool) {
+        let canonicalID = chunkID.hasPrefix("chunk.") ? chunkID : "chunk.\(chunkID)"
+        anchors[chunkID]?.isEnabled = visible
+        anchors[canonicalID]?.isEnabled = visible
+    }
+    public func setActiveInterior(_ chunkID: String?) {
+        let canonicalID = chunkID.map { $0.hasPrefix("chunk.") ? $0 : "chunk.\($0)" }
+        for (id, entity) in anchors {
+            let normalizedID = id.hasPrefix("chunk.") ? id : "chunk.\(id)"
+            guard normalizedID.contains("Interior") else { continue }
+            entity.isEnabled = canonicalID == normalizedID
+        }
+    }
     public func setActiveChunks(_ chunkIDs: Set<String>) {
+        let canonicalIDs = Set(chunkIDs.map { $0.hasPrefix("chunk.") ? $0 : "chunk.\($0)" })
         for (id, entity) in anchors where entity.name.hasPrefix("chunk.") {
-            entity.isEnabled = chunkIDs.contains(id)
+            let canonicalID = id.hasPrefix("chunk.") ? id : "chunk.\(id)"
+            entity.isEnabled = canonicalIDs.contains(canonicalID)
         }
     }
     public func attach(_ entity: Entity, stableID: String) { anchors[stableID] = entity; root.addChild(entity) }
@@ -159,11 +310,20 @@ public final class DHRev10RealityKitScene {
         chassis.position = [0, 0.35 + Float(shudderZ), 0]
     }
 
-    /// Applies BodyDamageState's per-zone deformation weights to the chassis entity. The
-    /// blockout marker mesh has no authored blend-shape targets to drive (see
-    /// DHRev10DeformationBlendShapes's doc comment), so until a production mesh exists this is a
-    /// crude scale-down proxy -- the point is that the real weight data now drives *something*
-    /// live on the entity graph, not that this looks like a crumpled panel.
+    /// Applies BodyDamageState's per-zone deformation weights to the chassis entity.
+    ///
+    /// Kingmaker_XR13.usdz (Tools/BlenderAssetGen/build_kingmaker.py) now genuinely ships 10
+    /// named UsdSkelBlendShape targets, one per CollisionZone (deform_frontLeft, deform_roof,
+    /// etc.), matching DHRev10DeformationBlendShapes.targetName(for:) exactly -- verified via USD
+    /// stage introspection that each has real, nonzero per-vertex offsets, not placeholder empty
+    /// targets. What's still missing is the runtime half: as of this SDK, RealityKit's public
+    /// Swift API has no BlendShape/MorphTarget weight-setting type at all (confirmed by grepping
+    /// RealityKit.swiftinterface directly, not by failing to find the right name), so there is no
+    /// public way to drive an imported USD blend shape's weight at runtime. Until Apple exposes
+    /// that, this stays a scale-down proxy on the whole chassis -- the point is that real weight
+    /// data drives *something* live on the entity graph, and the asset itself is production-ready
+    /// for whenever the API exists (or for authoring tools like Reality Composer Pro that can
+    /// already read/bake these targets ahead of time).
     public func applyDeformation(_ damage: BodyDamageState) {
         guard let chassis = anchors["kingmaker.chassis"] else { return }
         let severity = Float(DHRev10DeformationBlendShapes.weights(for: damage).values.max() ?? 0)
@@ -205,6 +365,23 @@ public final class DHRev10RealityKitScene {
         case .paradise: return ["gate", "market", "radio-tower"]
         case .storySite: return ["story-prop"]
         }
+    }
+
+    private func ensureKingmakerEngineBayAnchor(in kingmaker: Entity) {
+        if let existing = anchors["kingmaker.engineBay"], existing.parent === kingmaker { return }
+        let engineBay = marker(name: "kingmaker.engineBay", size: 0.7, height: 0.18, color: .orange)
+        engineBay.position = [0.2, 0.72, 0.65]
+        kingmaker.addChild(engineBay)
+        anchors["kingmaker.engineBay"] = engineBay
+    }
+
+    private func isDescendantOrSelf(_ entity: Entity, of ancestor: Entity) -> Bool {
+        var current: Entity? = entity
+        while let node = current {
+            if node === ancestor { return true }
+            current = node.parent
+        }
+        return false
     }
 
     private func buildGarageShell() {

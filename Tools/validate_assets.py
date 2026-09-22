@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Validate the runtime asset contract without requiring Blender or Xcode."""
 
+import json
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -10,9 +11,15 @@ RESOURCE_DIR = ROOT / "Sources/DHPresentation/Resources"
 ASSET_CONTRACTS = {
     "Kingmaker_XR13.usdz": {
         "members": {"Kingmaker_XR13.usdc", "textures/tex_paint.png", "textures/tex_metal.png", "textures/tex_rubber.png", "textures/tex_dark.png"},
-        # Blender's USD exporter shortens this empty transform label to bodyPan;
-        # keep the exported spelling as the stable archive contract.
-        "labels": (b"XR13_Assembly", b"chassis", b"bodyPan", b"engineBay", b"cabin"),
+        # Raw USDC string tables retain the assembly/chassis/engine-bay anchors;
+        # decoded hierarchy labels are checked separately by production_qa.py.
+        #
+        # The 10 deform_<zone> blend-shape target names (Tools/BlenderAssetGen/build_kingmaker.py)
+        # are deliberately NOT checked here: USD's crate format compresses the token section they
+        # land in, so a raw byte search never finds them even though they're genuinely present --
+        # confirmed instead via `pxr.UsdSkel` stage introspection at build time (requires
+        # Blender's bundled Python, which this script's docstring explicitly avoids depending on).
+        "labels": (b"XR13_Assembly", b"chassis", b"engineBay"),
     },
     "BlackridgeGarage.usdz": {
         "members": {"BlackridgeGarage.usdc"},
@@ -29,10 +36,15 @@ ASSET_CONTRACTS = {
 for _state in ("repaired", "damaged", "rusted"):
     ASSET_CONTRACTS[f"Kingmaker_XR13_{_state}.usdz"] = {
         "members": {f"Kingmaker_XR13_{_state}.usdc"},
-        "labels": (b"XR13_Assembly", b"chassis", b"body", b"engineBay", b"cabin"),
+        "labels": (b"XR13_Assembly", b"chassis", b"engineBay"),
     }
 MAX_USDZ_BYTES = 8 * 1024 * 1024
 MAX_TEXTURE_BYTES = 2 * 1024 * 1024
+JSON_CONTRACTS = {
+    "BlackridgeGarage.navmesh": ("chunkID", "polygons"),
+    "Player_Repair.anim": ("name", "fps", "durationSeconds", "frameCount", "tracks"),
+    "Kingmaker_Start.anim": ("name", "fps", "durationSeconds", "frameCount", "tracks"),
+}
 
 
 def check_size_and_textures(usdz: Path) -> None:
@@ -51,6 +63,35 @@ def check_size_and_textures(usdz: Path) -> None:
 
 
 def main() -> None:
+    for filename, keys in JSON_CONTRACTS.items():
+        path = RESOURCE_DIR / filename
+        if not path.is_file():
+            raise SystemExit(f"missing data asset: {path}")
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            raise SystemExit(f"invalid JSON data asset {filename}: {error}") from error
+        missing_keys = [key for key in keys if key not in payload]
+        if missing_keys:
+            raise SystemExit(f"missing data keys in {filename}: {missing_keys}")
+        if filename.endswith(".anim"):
+            if payload["fps"] <= 0 or payload["durationSeconds"] <= 0 or payload["frameCount"] < 2:
+                raise SystemExit(f"invalid animation timing in {filename}")
+            tracks = payload["tracks"]
+            if not isinstance(tracks, list) or not tracks:
+                raise SystemExit(f"animation has no tracks: {filename}")
+            for track in tracks:
+                if not track.get("bone") or track.get("axis") not in {"x", "y", "z"}:
+                    raise SystemExit(f"invalid animation track identity in {filename}: {track}")
+                if len(track.get("keyframes", [])) < 2:
+                    raise SystemExit(f"animation track has too few keyframes in {filename}: {track}")
+        print(f"validated {path.relative_to(ROOT)} ({path.stat().st_size} bytes)")
+
+    usda = RESOURCE_DIR / "VehicleCombat_FX.usda"
+    if not usda.is_file() or not usda.read_text(encoding="utf-8").startswith("#usda"):
+        raise SystemExit(f"invalid particle asset: {usda}")
+    print(f"validated {usda.relative_to(ROOT)} ({usda.stat().st_size} bytes)")
+
     for filename, contract in ASSET_CONTRACTS.items():
         usdz = RESOURCE_DIR / filename
         if not usdz.is_file():

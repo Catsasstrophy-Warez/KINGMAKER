@@ -1,8 +1,11 @@
-# Kingmaker / Dead Highway — Asset Commissioning Brief
+# Kingmaker / Dead Highway — Asset Working Spec
 
-One page for an artist or studio to quote and build against, instead of reverse-engineering intent
-from the codebase. Everything here is a real, load-bearing contract already used by running code
+This project has no external art department: Claude is the artist of record for this project, and
+this is Claude's own working spec to build against rather than reverse-engineer intent from the
+codebase each time. Everything here is a real, load-bearing contract already used by running code
 and tests — hitting these specs means an asset drops in with no simulation or engine changes.
+Progress against each section should be tracked here as items close (see the checklist at the
+bottom), the same way `Docs/ROADMAP_1_20.md` tracks the rest of the project.
 
 ## What this is
 
@@ -101,5 +104,18 @@ environment blew out the paint's exposure and was reverted rather than shipped b
 
 ## What NOT to worry about
 
-Simulation, save/load, combat, economy, dialogue, and UI are done and tested — an artist's output
-only needs to be a visual/audio replacement, not a functional one.
+Simulation, save/load, combat, economy, dialogue, and UI are done and tested — this work only
+needs to be a visual/audio replacement, not a functional one.
+
+## Progress checklist
+
+- [x] Deformation blend-shape targets on the chassis mesh (`deform_<zone>` × 10) — real, nonzero
+      per-vertex offsets, verified via USD stage introspection on every build. Runtime driving is
+      still a scale-down proxy: RealityKit's public Swift API has no way to set an imported blend
+      shape's weight as of this SDK (confirmed by inspecting `RealityKit.swiftinterface` directly,
+      not by failing to find the right name) — the asset is ready for whenever that API exists.
+- [ ] Condition-variant material pass beyond current procedural texturing
+- [ ] Environment/IBL lighting pass
+- [ ] Real audio to replace the 15 synthesized placeholder stems
+- [ ] Second animation clip (idle) for the mannequin rig
+- [ ] Unique per-NPC material variation across the 20-entry roster

@@ -8,6 +8,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, "../.."))
 GENERATED_DIR = os.path.join(SCRIPT_DIR, "generated")
 RESOURCE_DIR = os.path.join(PROJECT_ROOT, "Sources", "DHPresentation", "Resources")
+_args = []
 if "--" in sys.argv:
     _args = sys.argv[sys.argv.index("--") + 1:]
     if "--output-dir" in _args:
@@ -15,6 +16,9 @@ if "--" in sys.argv:
         if _i + 1 >= len(_args):
             raise SystemExit("--output-dir requires a path")
         RESOURCE_DIR = os.path.abspath(_args[_i + 1])
+BUILD_STATE = "wasteland"
+if "--state" in _args:
+    BUILD_STATE = _args[_args.index("--state") + 1]
 TEX_DIR = os.path.join(GENERATED_DIR, "textures")
 os.makedirs(TEX_DIR, exist_ok=True)
 os.makedirs(GENERATED_DIR, exist_ok=True)
@@ -97,9 +101,12 @@ def make_material(name, rgb, metallic=0.0, roughness=0.5, texture_path=None, coa
     return mat
 
 # dark gunmetal clearcoat paint, real clearcoat via Coat Weight/Roughness
-MAT_BODY = make_material("XR13_Paint", (0.085, 0.09, 0.10), metallic=0.55, roughness=0.28,
-                          texture_path=PATH_PAINT, coat=1.0, coat_roughness=0.04)
+BODY_COLOR = {"repaired": (0.11, 0.13, 0.15), "damaged": (0.075, 0.07, 0.065), "rusted": (0.20, 0.075, 0.035), "wasteland": (0.085, 0.09, 0.10)}.get(BUILD_STATE, (0.085, 0.09, 0.10))
+BODY_TEXTURE = PATH_METAL if BUILD_STATE == "rusted" else PATH_PAINT
+MAT_BODY = make_material("XR13_Paint_" + BUILD_STATE, BODY_COLOR, metallic=0.55, roughness=0.28,
+                          texture_path=BODY_TEXTURE, coat=0.45 if BUILD_STATE == "rusted" else 1.0, coat_roughness=0.04)
 MAT_GLASSHOUSE = make_material("XR13_Glasshouse", (0.02, 0.025, 0.03), metallic=0.0, roughness=0.05, coat=1.0, coat_roughness=0.02)
+MAT_WINDOW = make_material("XR13_WindowGlass", (0.008, 0.018, 0.028), metallic=0.35, roughness=0.08, coat=1.0, coat_roughness=0.02)
 MAT_DARK = make_material("XR13_Dark", (0.035, 0.035, 0.04), metallic=0.2, roughness=0.5, texture_path=PATH_DARK)
 MAT_METAL = make_material("XR13_Metal", (0.55, 0.55, 0.58), metallic=0.95, roughness=0.22, texture_path=PATH_METAL)
 MAT_RUBBER = make_material("XR13_Rubber", (0.012, 0.012, 0.012), metallic=0.0, roughness=0.75, texture_path=PATH_RUBBER)
@@ -301,6 +308,46 @@ bevel = body_shell.modifiers.new("Bevel", "BEVEL")
 bevel.width = 0.02
 bevel.segments = 2
 
+# ---------- deformation blend shapes ----------
+# Real, named USD blend-shape targets for DHRev10DeformationBlendShapes' per-CollisionZone weight
+# contract (Sources/DHPresentation/Rev10DeformationBlendShapes.swift), which previously had
+# nothing to drive: the RealityKit bridge could only fake damage with a crude whole-body scale-
+# down. One shape key per CollisionZone, named to match DHVehicle.CollisionZone.rawValue exactly
+# (deform_frontLeft, deform_roof, etc.) so DHRev10DeformationBlendShapes.targetName(for:)'s
+# "deform_<zone>" naming resolves directly to a real target instead of an assumed convention.
+# Deformation zones anchored in body_shell's local space (x: +2.85 nose to -2.85 tail, y: left/
+# right half-width, z: 0 floor to ~0.5 beltline -- see body_sections/body_ring above) with a
+# smooth radial falloff, each pushing vertices inward/downward to read as a crumple rather than a
+# uniform squash.
+DEFORMATION_ZONES = {
+    "frontCenter": ((2.4, 0.0, 0.32), (-1.0, 0.0, -0.35), 1.1),
+    "frontLeft": ((1.85, 0.85, 0.38), (-0.55, -0.75, -0.3), 1.0),
+    "frontRight": ((1.85, -0.85, 0.38), (-0.55, 0.75, -0.3), 1.0),
+    "rearCenter": ((-2.4, 0.0, 0.30), (1.0, 0.0, -0.35), 1.1),
+    "rearLeft": ((-1.55, 0.85, 0.36), (0.55, -0.75, -0.3), 1.0),
+    "rearRight": ((-1.55, -0.85, 0.36), (0.55, 0.75, -0.3), 1.0),
+    "leftSide": ((-0.2, 1.0, 0.3), (0.0, -0.9, -0.15), 1.3),
+    "rightSide": ((-0.2, -1.0, 0.3), (0.0, 0.9, -0.15), 1.3),
+    "roof": ((0.0, 0.0, 0.5), (0.0, 0.0, -0.9), 2.2),
+    "floor": ((0.0, 0.0, 0.02), (0.0, 0.0, 0.9), 2.2),
+}
+_INTENSITY = 0.16
+body_shell.shape_key_add(name="Basis", from_mix=False)
+for _zone, (_anchor, _push, _radius) in DEFORMATION_ZONES.items():
+    _key = body_shell.shape_key_add(name="deform_" + _zone, from_mix=False)
+    _ax, _ay, _az = _anchor
+    _px, _py, _pz = _push
+    for _i, _v in enumerate(body_shell.data.vertices):
+        _dx, _dy, _dz = _v.co.x - _ax, _v.co.y - _ay, _v.co.z - _az
+        _dist = math.sqrt(_dx * _dx + _dy * _dy + _dz * _dz)
+        _w = max(0.0, 1.0 - _dist / _radius)
+        _w = _w * _w
+        if _w > 0:
+            _key.data[_i].co.x += _px * _w * _INTENSITY
+            _key.data[_i].co.y += _py * _w * _INTENSITY
+            _key.data[_i].co.z += _pz * _w * _INTENSITY
+    _key.value = 0.0
+
 # fastback greenhouse: a distinct, narrower volume stepped up from the beltline, roof flowing
 # down into the decklid (the "fastback roof" the visual canon calls for), sitting only over the
 # cabin span so the wide rear haunches remain visible outside it.
@@ -357,6 +404,28 @@ greenhouse = loft("greenhouse", green_sections, body_panels, MAT_GLASSHOUSE, rin
 green_bevel = greenhouse.modifiers.new("Bevel", "BEVEL")
 green_bevel.width = 0.035
 green_bevel.segments = 3
+
+# Glazing and trim breakup. The reference vehicle reads through its glasshouse,
+# windshield rake, black window surrounds, and precise door hardware—not as one
+# uninterrupted roof primitive.
+box("windshieldGlass", (0.035, 0.82, 0.34), chassis_root, MAT_WINDOW,
+    loc=(0.86, 0, GROUND + 0.72), rot=(0, math.radians(-18), 0))
+box("rearGlass", (0.035, 0.78, 0.30), chassis_root, MAT_WINDOW,
+    loc=(-1.18, 0, GROUND + 0.70), rot=(0, math.radians(20), 0))
+for side in (-1, 1):
+    box(f"sideWindow_{'L' if side < 0 else 'R'}", (0.86, 0.025, 0.27), chassis_root,
+        MAT_WINDOW, loc=(-0.12, side * 0.965, GROUND + 0.78), rot=(0, 0, math.radians(side * 2)))
+    box(f"windowTrim_{'L' if side < 0 else 'R'}", (1.35, 0.018, 0.025), chassis_root,
+        MAT_DARK, loc=(-0.18, side * 0.985, GROUND + 0.60))
+    box(f"doorHandle_{'L' if side < 0 else 'R'}", (0.18, 0.035, 0.035), chassis_root,
+        MAT_METAL, loc=(0.20, side * 1.015, GROUND + 0.48))
+    for k in range(4):
+        box(f"fenderVent_{'L' if side < 0 else 'R'}_{k}", (0.16, 0.025, 0.025), chassis_root,
+            MAT_DARK, loc=(1.20 + k * 0.08, side * 1.01, GROUND + 0.36),
+            rot=(0, 0, math.radians(-8)))
+for x in (1.20, 1.50):
+    cyl(f"hoodLatch_{x}", 0.035, 0.035, chassis_root, MAT_METAL,
+        loc=(x, 0.40, GROUND + 0.49), rot=(math.pi / 2, 0, 0), segs=12)
 
 # side mirrors (missing entirely before -- both canonical orthogonal views show them clearly)
 for side in (-1, 1):
@@ -555,6 +624,13 @@ for side in (-1, 1):
     cyl("rackRail" + ("L" if side < 0 else "R"), 0.015, 0.70, cargo, MAT_METAL,
         loc=(0, side * 0.38, 0.045), rot=(math.radians(90), 0, 0))
 
+# Separate roof skin and rails: this preserves a readable panel break even in
+# USD viewers that flatten clearcoat materials during conversion.
+box("roofPanel", (1.20, 1.38, 0.025), chassis_root, MAT_DARK, loc=(-0.20, 0, GROUND + 0.997))
+for side in (-1, 1):
+    box(f"roofRail_{'L' if side < 0 else 'R'}", (1.35, 0.035, 0.045), chassis_root, MAT_METAL,
+        loc=(-0.25, side * 0.64, GROUND + 1.02), rot=(0, 0, math.radians(side * 3)))
+
 # ---------- UV unwrap every mesh (smart project) so the image textures above map correctly;
 # the bmesh-built meshes (bodyShell, greenhouse, splitter, diffuser fins) have no UVs at all until
 # this runs, and re-unwrapping the bpy.ops primitives too keeps texel density consistent ----------
@@ -573,7 +649,8 @@ for obj in bpy.data.objects:
 blend_path = os.path.join(GENERATED_DIR, "Kingmaker_XR13.blend")
 bpy.ops.wm.save_as_mainfile(filepath=blend_path)
 
-usdz_path = os.path.join(RESOURCE_DIR, "Kingmaker_XR13.usdz")
+output_name = "Kingmaker_XR13.usdz" if BUILD_STATE == "wasteland" else f"Kingmaker_XR13_{BUILD_STATE}.usdz"
+usdz_path = os.path.join(RESOURCE_DIR, output_name)
 bpy.ops.wm.usd_export(
     filepath=usdz_path,
     selected_objects_only=False,
@@ -583,7 +660,32 @@ bpy.ops.wm.usd_export(
     export_normals=True,
     export_hair=False,
     export_armatures=False,
+    export_shapekeys=True,
     root_prim_path="/",
     convert_orientation=False,
 )
 print("EXPORTED:", usdz_path, os.path.exists(usdz_path), os.path.getsize(usdz_path) if os.path.exists(usdz_path) else -1)
+
+# ---------- self-verify the deformation blend shapes actually round-tripped ----------
+# Tools/validate_assets.py can't check these (USD's crate compression hides the target names
+# from a raw byte search even though they're genuinely present -- see its comment), so this
+# generator verifies its own output directly via pxr/UsdSkel instead of trusting the export
+# silently succeeded.
+try:
+    from pxr import Usd, UsdSkel
+    _stage = Usd.Stage.Open(usdz_path)
+    _found = set()
+    for _prim in _stage.Traverse():
+        if _prim.IsA(UsdSkel.BlendShape):
+            _name = _prim.GetName()
+            _offsets = UsdSkel.BlendShape(_prim).GetOffsetsAttr().Get()
+            _nonzero = sum(1 for _o in (_offsets or []) if _o.GetLength() > 1e-6)
+            if _nonzero > 0:
+                _found.add(_name)
+    _expected = {"deform_" + z for z in DEFORMATION_ZONES}
+    _missing = _expected - _found
+    if _missing:
+        raise SystemExit(f"deformation blend-shape verification FAILED, missing/empty: {sorted(_missing)}")
+    print("VERIFIED: all", len(_expected), "deformation blend shapes present with nonzero offsets")
+except ImportError:
+    print("WARNING: pxr not importable in this Blender build, skipped blend-shape self-verification")
