@@ -21,14 +21,11 @@ public struct DHRev10VerticalSlice: Codable, Sendable, Equatable {
     }
     public mutating func repairKingmaker() {
         repairedComponentIDs = Set(kingmaker.components.map { $0.id.uuidString })
-        kingmaker.components = kingmaker.components.map { var c = $0; c.condition = .serviceable; return c }
+        kingmaker.repairAllComponents()
     }
     public mutating func prepareKingmakerForStart() {
-        repairKingmaker()
-        kingmaker.fuelLiters = max(kingmaker.fuelLiters, 12)
-        kingmaker.fuelPressureKPa = max(kingmaker.fuelPressureKPa, 350)
-        kingmaker.batterySOC = max(kingmaker.batterySOC, 0.92)
-        _ = kingmaker.crank(seconds: 1)
+        repairedComponentIDs = Set(kingmaker.components.map { $0.id.uuidString })
+        _ = kingmaker.prepareForStart()
     }
     public mutating func advance(to next: DHRev10Beat) -> Bool {
         let allowed: [DHRev10Beat: Set<DHRev10Beat>] = [.garage: [.inspect], .inspect: [.diagnose], .diagnose: [.scavenge], .scavenge: [.repair], .repair: [.start], .start: [.drive], .drive: [.hostileEncounter], .hostileEncounter: [.radioConsequence], .radioConsequence: [.paradise], .paradise: [.negotiate], .negotiate: [.recruit], .recruit: [.save], .save: [.reload]]

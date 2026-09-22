@@ -9,6 +9,21 @@ public struct KingmakerState: Codable, Sendable, Equatable { public let id: Enti
  public var canCrank:Bool { batterySOC > 0.15 && hasViable(.engine) && hasViable(.electrical) }
  public var canStart:Bool { canCrank && fuelLiters > 0.5 && fuelPressureKPa > 150 && hasViable(.fuel) && hasViable(.ignition) && hasViable(.lubrication) && hasViable(.cooling) }
  public mutating func crank(seconds:Double)->Bool { guard canCrank else{return false}; batterySOC=max(0,batterySOC-0.012*seconds); if canStart { engineRunning=true; oilPressureKPa=300; return true }; return false }
+ /// Sets every component to .serviceable. Previously duplicated inline (identical
+ /// `components.map { ...condition = .serviceable... }`) in both DHRev10VerticalSlice's
+ /// repairKingmaker() and DHRev10SliceCoordinator's repair()/repairAndStart() -- see
+ /// Docs/ROADMAP_1_20.md item 18, "deeper model consolidation remains."
+ public mutating func repairAllComponents() { components = components.map { var c = $0; c.condition = .serviceable; return c } }
+ /// Repairs every component, then sets fuel/battery/pressure to the minimum needed to crank and
+ /// cranks for one second -- the shared "repair and start" sequence duplicated the same way as
+ /// repairAllComponents() above.
+ @discardableResult public mutating func prepareForStart() -> Bool {
+     repairAllComponents()
+     fuelLiters = max(fuelLiters, 12)
+     fuelPressureKPa = max(fuelPressureKPa, 350)
+     batterySOC = max(batterySOC, 0.92)
+     return crank(seconds: 1)
+ }
  public mutating func simulate(seconds:Double){ guard engineRunning else{return}; fuelLiters=max(0,fuelLiters-0.0015*seconds); batterySOC=min(1,batterySOC+0.002*seconds); coolantC += hasViable(.cooling) ? 0.03*seconds : 1.2*seconds; if fuelLiters<=0 || coolantC>125 { engineRunning=false } }
  public static func derelict(id:EntityID=UUID())->Self { let essentials:[(String,KingmakerSystem,ComponentCondition)] = [("429-pattern big-block core",.engine,.seized),("Roots supercharger assembly",.induction,.poor),("Radiator",.cooling,.failed),("Oil pump",.lubrication,.poor),("Fuel pump",.fuel,.failed),("Ignition module",.ignition,.poor),("Battery/charging harness",.electrical,.failed),("Six-speed gearbox",.transmission,.serviceable),("Limited-slip differential",.differential,.poor),("Front suspension",.suspension,.poor),("Four-wheel brakes",.brakes,.failed),("Wheels and tires",.wheelsTires,.poor),("Fastback chassis",.chassis,.serviceable),("Kingmaker body",.body,.poor)]; return .init(id:id,components:essentials.map{.init(id:UUID(),name:$0.0,system:$0.1,condition:$0.2,wear:0.7)},fuelLiters:0,batterySOC:0,engineRunning:false) }
 }

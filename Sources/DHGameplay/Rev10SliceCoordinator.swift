@@ -48,18 +48,18 @@ public struct DHRev10SliceCoordinator: Codable, Equatable, Sendable {
     public mutating func movePlayer(to position: DHRev10ScenePoint, county: DHBlackridgeCounty = .verticalSlice) { playerPosition = position; cameraPosition = DHRev10ScenePoint(x: position.x, y: position.y + 18, z: position.z + 18); _ = county }
     public mutating func stream(center: String, neighbors: [String]) { currentChunkID = center; streamedChunkIDs = Set([center] + neighbors) }
     public mutating func repair() {
-        kingmaker.components = kingmaker.components.map { var component = $0; component.condition = .serviceable; return component }
+        kingmaker.repairAllComponents()
         playerMode = .repairing
         inspectionMode = .engineBay
     }
     public mutating func start() {
-        kingmaker.fuelLiters = max(kingmaker.fuelLiters, 12)
-        kingmaker.fuelPressureKPa = max(kingmaker.fuelPressureKPa, 350)
-        kingmaker.batterySOC = max(kingmaker.batterySOC, 0.92)
-        _ = kingmaker.crank(seconds: 1)
+        _ = kingmaker.prepareForStart()
         playerMode = .driving
     }
-    public mutating func repairAndStart() { kingmaker.fuelLiters = max(kingmaker.fuelLiters, 12); kingmaker.fuelPressureKPa = 350; kingmaker.batterySOC = max(kingmaker.batterySOC, 0.9); kingmaker.components = kingmaker.components.map { var c = $0; c.condition = .serviceable; return c }; _ = kingmaker.crank(seconds: 1); playerMode = .driving }
+    public mutating func repairAndStart() {
+        _ = kingmaker.prepareForStart()
+        playerMode = .driving
+    }
     public mutating func resolveEncounter() { encounter.resolve(); encounterPresentation = "disabled"; radioText = "HOSTILE VEHICLE ENCOUNTER RESOLVED" }
     public mutating func recruit(_ id: String) { recruitedNPCID = id; playerMode = .dialogue }
 }
