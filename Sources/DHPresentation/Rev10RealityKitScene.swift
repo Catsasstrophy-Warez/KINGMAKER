@@ -10,27 +10,36 @@ import RealityKit
 @MainActor
 public final class DHRev10RealityKitScene {
     public let root = Entity()
-    private var anchors: [String: Entity] = [:]
-    private var kingmakerVariants: [String: Entity] = [:]
-    private var activeKingmakerVariant: String?
-    private var ambientFXEntities: [String: Entity] = [:]
-    private var interactionHighlight: Entity?
-    private var activeInteractionID: String?
-    private var npcTemplate: Entity?
-    private var npcEntities: [String: Entity] = [:]
-    private var vehicleTemplate: Entity?
-    private var vehicleEntities: [String: Entity] = [:]
+    var anchors: [String: Entity] = [:]
+    var kingmakerVariants: [String: Entity] = [:]
+    var activeKingmakerVariant: String?
+    var playerAnimationVariants: [String: Entity] = [:]
+    var activePlayerAnimation: String?
+    var ambientFXEntities: [String: Entity] = [:]
+    var interactionHighlight: Entity?
+    var activeInteractionID: String?
+    var npcTemplate: Entity?
+    var npcEntities: [String: Entity] = [:]
+    var vehicleTemplate: Entity?
+    var vehicleEntities: [String: Entity] = [:]
+    var cameraBasePosition = SIMD3<Float>(repeating: 0)
     public private(set) var loadedAssetIDs: Set<String> = []
     public private(set) var missingAssetIDs: Set<String> = []
-    private let animationLibrary = DHRev10AnimationClipLibrary()
-    private let combatFXLibrary = DHRev10CombatFXLibrary()
+    public private(set) var isReadyForUpdates = false
+    public var npcIDs: Set<String> { Set(npcEntities.keys) }
+    public var vehicleIDs: Set<String> { Set(vehicleEntities.keys) }
+    let animationLibrary = DHRev10AnimationClipLibrary()
+    let combatFXLibrary = DHRev10CombatFXLibrary()
 
     public init() { root.name = "Blackridge County Rev10" }
 
     public func beginAssetLoadReport() {
         loadedAssetIDs.removeAll()
         missingAssetIDs.removeAll()
+        isReadyForUpdates = false
     }
+
+    public func finishAssetLoad() { isReadyForUpdates = true }
 
     public func recordAssetLoad(_ bindingID: String, loaded: Bool) {
         if loaded {
@@ -42,26 +51,31 @@ public final class DHRev10RealityKitScene {
     }
 
     public func build(county: DHBlackridgeCounty = .verticalSlice, hierarchy: KingmakerVisualHierarchy? = nil, kingmakerSpec: KingmakerVisualSpec = .init(path: .wastelandEndurance)) {
+        isReadyForUpdates = false
         root.children.removeAll()
         anchors.removeAll()
         kingmakerVariants.removeAll()
         activeKingmakerVariant = nil
+        playerAnimationVariants.removeAll()
+        activePlayerAnimation = nil
         ambientFXEntities.removeAll()
         npcTemplate = nil
         npcEntities.removeAll()
         vehicleTemplate = nil
         vehicleEntities.removeAll()
+        cameraBasePosition = .zero
         interactionHighlight = nil
         activeInteractionID = nil
         let camera = PerspectiveCamera()
         camera.name = "camera.isometric"
         camera.position = [32, 28, 36]
         camera.look(at: [28, 0, 9], from: camera.position, relativeTo: root)
+        cameraBasePosition = camera.position
         root.addChild(camera)
         anchors["camera.isometric"] = camera
         let light = DirectionalLight()
         light.name = "light.blackridge"
-        light.light.intensity = 18000
+        light.light.intensity = 9000
         light.look(at: [20, 0, 10], from: [20, 30, 20], relativeTo: root)
         root.addChild(light)
         buildEnvironmentLighting()
@@ -103,12 +117,13 @@ public final class DHRev10RealityKitScene {
             registerSpawnAnchor("spawn.paradise.player", position: paradiseOrigin + [0, 0.6, 1.5])
             registerSpawnAnchor("spawn.paradise.vehicleExit", position: paradiseOrigin + [0, 0.35, -2.5])
         }
-        for road in county.roads {
+        for (index, road) in county.roads.enumerated() {
             let roadEntity = marker(name: "road.\(road.id)", size: 4.0, height: 0.05, color: .darkGray)
             roadEntity.scale = [1.8, 1, 0.35]
             roadEntity.position = midpoint(from: anchors[road.from], to: anchors[road.to])
             root.addChild(roadEntity)
             anchors[road.id] = roadEntity
+            if index == 0 { anchors["road.segment.blackridge"] = roadEntity }
         }
         let encounter = marker(name: "encounter.north-road", size: 1.8, height: 0.9, color: .red)
         encounter.position = [18, 0.45, 4]
@@ -161,22 +176,18 @@ public final class DHRev10RealityKitScene {
     }
 
     public func entity(for stableID: String) -> Entity? { anchors[stableID] }
+    public func worldPosition(for stableID: String) -> DHVector3? {
+        guard let entity = anchors[stableID] else { return nil }
+        let position = entity.position(relativeTo: root)
+        return DHVector3(Double(position.x), Double(position.y), Double(position.z))
+    }
     public func spawnPosition(for stableID: String) -> SIMD3<Float>? {
         anchors[stableID]?.position(relativeTo: root)
     }
     public func replaceKingmaker(with entity: Entity) {
         installKingmaker(entity)
     }
-    public func registerKingmakerVariant(_ entity: Entity, id: String) {
-        kingmakerVariants[id] = entity.clone(recursive: true)
-        if anchors["kingmaker"] == nil { setKingmakerVariant(id) }
-    }
-    public func setKingmakerVariant(_ id: String) {
-        guard id != activeKingmakerVariant, let source = kingmakerVariants[id] else { return }
-        installKingmaker(source.clone(recursive: true))
-        activeKingmakerVariant = id
-    }
-    private func installKingmaker(_ entity: Entity) {
+    func installKingmaker(_ entity: Entity) {
         if let current = anchors["kingmaker"] {
             let staleIDs = anchors.compactMap { key, value in isDescendantOrSelf(value, of: current) ? key : nil }
             for id in staleIDs { anchors.removeValue(forKey: id) }
@@ -200,6 +211,7 @@ public final class DHRev10RealityKitScene {
         let transform = current.transform
         current.removeFromParent()
         entity.name = "\(canonicalChunkID).asset"
+        entity.isEnabled = true
         entity.transform = transform
         let aliases = anchors.compactMap { key, value in value === current ? key : nil }
         for alias in aliases { anchors[alias] = entity }
@@ -214,6 +226,7 @@ public final class DHRev10RealityKitScene {
         let parent = current.parent ?? root
         current.removeFromParent()
         entity.name = "\(stableID).asset"
+        entity.isEnabled = true
         anchors[stableID] = entity
         parent.addChild(entity)
     }
@@ -242,8 +255,23 @@ public final class DHRev10RealityKitScene {
             Float(cos(yaw) * horizontalDistance)
         )
         let targetPosition = SIMD3<Float>(Float(target.x), Float(target.y), Float(target.z))
-        camera.position = targetPosition + offset
+        cameraBasePosition = targetPosition + offset
+        camera.position = cameraBasePosition
         camera.look(at: targetPosition, from: camera.position, relativeTo: root)
+    }
+    /// Applies a short deterministic impact offset to the active camera. Gameplay can
+    /// feed normalized encounter/collision severity here without owning RealityKit
+    /// camera state or introducing frame-time-dependent randomness.
+    public func applyCameraImpact(severity: Double, phase: Double = 0) {
+        guard let camera = anchors["camera.isometric"] as? PerspectiveCamera else { return }
+        let clamped = Float(max(0, min(1, severity)))
+        let amplitude = 0.08 + clamped * 0.28
+        let offset = SIMD3<Float>(
+            sin(Float(phase) * 17.0) * amplitude,
+            abs(cos(Float(phase) * 13.0)) * amplitude * 0.55,
+            cos(Float(phase) * 19.0) * amplitude * 0.35
+        )
+        camera.position = cameraBasePosition + offset
     }
     /// Marks the currently focused interaction hotspot in the live scene. The
     /// stable entity ID is shared with the interaction catalog and HUD prompt.
@@ -262,30 +290,6 @@ public final class DHRev10RealityKitScene {
         target.addChild(marker)
         interactionHighlight = marker
     }
-    public func installAmbientEffects(budget: DHFXBudget = .init(), rainIntensity: Double = 0, fogDensity: Double = 0.12) {
-        let effects: [(String, ParticleEmitterComponent)] = [
-            ("fx.dust", DHRev10ParticleEffects.dust(budget: budget)),
-            ("fx.rain", DHRev10ParticleEffects.rain(intensity: rainIntensity, budget: budget)),
-            ("fx.ground-fog", DHRev10ParticleEffects.groundFog(density: fogDensity)),
-        ]
-        for (id, emitter) in effects {
-            let entity = ambientFXEntities[id] ?? Entity()
-            entity.name = id
-            entity.components.set(emitter)
-            if entity.parent == nil { root.addChild(entity) }
-            ambientFXEntities[id] = entity
-            anchors[id] = entity
-        }
-    }
-    public func updateAmbientEffects(speedKPH: Double, coolantC: Double, budget: DHFXBudget = .init()) {
-        guard let dust = ambientFXEntities["fx.dust"] else { return }
-        var emitter = DHRev10ParticleEffects.dust(budget: budget)
-        emitter.isEmitting = speedKPH > 2
-        dust.components.set(emitter)
-        guard let heat = anchors["kingmaker.engineBay"] else { return }
-        let heatEmitter = DHRev10ParticleEffects.heatHaze(thermalLoad: (coolantC - 85) / 35)
-        heat.components.set(heatEmitter)
-    }
     public func setInterior(_ chunkID: String, visible: Bool) {
         let canonicalID = chunkID.hasPrefix("chunk.") ? chunkID : "chunk.\(chunkID)"
         anchors[chunkID]?.isEnabled = visible
@@ -300,189 +304,39 @@ public final class DHRev10RealityKitScene {
         }
     }
     public func setActiveChunks(_ chunkIDs: Set<String>) {
-        let canonicalIDs = Set(chunkIDs.map { $0.hasPrefix("chunk.") ? $0 : "chunk.\($0)" })
+        let requestedIDs = chunkIDs.isEmpty ? ["garage"] : Array(chunkIDs)
+        let canonicalIDs = Set(requestedIDs.map { $0.hasPrefix("chunk.") ? $0 : "chunk.\($0)" })
         for (id, entity) in anchors where entity.name.hasPrefix("chunk.") {
             let canonicalID = id.hasPrefix("chunk.") ? id : "chunk.\(id)"
             entity.isEnabled = canonicalIDs.contains(canonicalID)
         }
     }
-    public func attach(_ entity: Entity, stableID: String) { anchors[stableID] = entity; root.addChild(entity) }
 
-    private func registerSpawnAnchor(_ stableID: String, position: SIMD3<Float>) {
+    public func setEncounterVisible(_ visible: Bool) {
+        anchors["encounter.north-road"]?.isEnabled = visible
+    }
+    /// Attaches an authored asset to an existing world anchor without losing the anchor's
+    /// placement. Loaded USDZ roots arrive at their own origin, while diagnostic county anchors
+    /// already carry the authored world transform.
+    public func attach(_ entity: Entity, stableID: String) {
+        if let target = anchors[stableID] {
+            entity.position = target.position(relativeTo: root)
+            entity.orientation = target.orientation(relativeTo: root)
+            entity.scale = target.scale(relativeTo: root)
+            target.isEnabled = false
+        }
+        entity.name = "\(stableID).asset"
+        entity.isEnabled = true
+        anchors[stableID] = entity
+        root.addChild(entity)
+    }
+
+    func registerSpawnAnchor(_ stableID: String, position: SIMD3<Float>) {
         let anchor = Entity()
         anchor.name = stableID
         anchor.position = position
         anchors[stableID] = anchor
         root.addChild(anchor)
-    }
-
-    /// Registers the loaded mannequin entity (player.walk's resolved asset) as the template every
-    /// spawnNPC(...) call clones. Previously no NPC -- named or otherwise -- had any visual
-    /// representation in this scene at all; DHProductionNPCRoster.appearance(for:) already
-    /// produces real per-NPC skin/cloth colors (DHGameplay), but this file deliberately doesn't
-    /// depend on DHGameplay, so the caller (which does) is responsible for resolving that data and
-    /// passing plain color tuples to spawnNPC below, the same "entities/data come in from outside"
-    /// pattern replaceKingmaker/registerKingmakerVariant already use for the vehicle.
-    public func registerNPCTemplate(_ entity: Entity) {
-        npcTemplate = entity
-    }
-
-    /// Clones the registered NPC template and retints its skin/cloth sub-meshes (matched by the
-    /// stable part names build_character_rig.py exports: head_mesh/upperarm_*/forearm_*/
-    /// lowerleg_* for skin, torso/pelvis/upperleg_* for cloth) to the given colors, then places it
-    /// at `position`. Returns nil (no-op) if no template has been registered yet.
-    @discardableResult
-    public func spawnNPC(id: String, skinTone: (r: Double, g: Double, b: Double), clothColor: (r: Double, g: Double, b: Double), at position: DHVector3) -> Entity? {
-        guard let template = npcTemplate else { return nil }
-        let instance = template.clone(recursive: true)
-        instance.name = id
-        instance.position = [Float(position.x), Float(position.y), Float(position.z)]
-        applyNPCAppearance(to: instance, skinTone: skinTone, clothColor: clothColor)
-        npcEntities[id]?.removeFromParent()
-        npcEntities[id] = instance
-        anchors[id] = instance
-        root.addChild(instance)
-        return instance
-    }
-
-    public func removeNPC(id: String) {
-        npcEntities[id]?.removeFromParent()
-        npcEntities.removeValue(forKey: id)
-        anchors.removeValue(forKey: id)
-    }
-
-    private static let npcSkinPartNames: Set<String> = ["head_mesh", "upperarm_L", "forearm_L", "upperarm_R", "forearm_R", "lowerleg_L", "lowerleg_R"]
-    private static let npcClothPartNames: Set<String> = ["torso", "pelvis", "upperleg_L", "upperleg_R"]
-
-    private func applyNPCAppearance(to entity: Entity, skinTone: (r: Double, g: Double, b: Double), clothColor: (r: Double, g: Double, b: Double)) {
-        let skinMaterial = SimpleMaterial(color: SimpleMaterial.Color(red: CGFloat(skinTone.r), green: CGFloat(skinTone.g), blue: CGFloat(skinTone.b), alpha: 1), isMetallic: false)
-        let clothMaterial = SimpleMaterial(color: SimpleMaterial.Color(red: CGFloat(clothColor.r), green: CGFloat(clothColor.g), blue: CGFloat(clothColor.b), alpha: 1), isMetallic: false)
-        for descendant in allDescendants(of: entity) {
-            guard let model = descendant as? ModelEntity, model.model != nil else { continue }
-            if Self.npcSkinPartNames.contains(descendant.name) {
-                model.model?.materials = [skinMaterial]
-            } else if Self.npcClothPartNames.contains(descendant.name) {
-                model.model?.materials = [clothMaterial]
-            }
-        }
-    }
-
-    private func allDescendants(of entity: Entity) -> [Entity] {
-        var result: [Entity] = []
-        for child in entity.children {
-            result.append(child)
-            result.append(contentsOf: allDescendants(of: child))
-        }
-        return result
-    }
-
-    /// Registers a loaded vehicle entity (currently the hostile.vehicle/HostileVehicle_Raider
-    /// asset -- the only generic vehicle blockout that exists) as the template every
-    /// spawnVehicle(...) clones. No mesh exists yet for the roster's actual VehicleClass variety
-    /// (interceptor/buggy/pickup/tanker/semi/motorcycle/bus/sedan/atv/towTruck/wreck are all the
-    /// same generic shape today); this makes the shared silhouette individually paintable per
-    /// vehicle rather than pretending each roster entry has a distinct model, the same honest
-    /// "one shared mesh, real per-instance material variation" posture spawnNPC already uses for
-    /// the mannequin. Swap the template for real per-kind meshes later with no call-site changes.
-    public func registerVehicleTemplate(_ entity: Entity) {
-        vehicleTemplate = entity
-    }
-
-    /// Clones the registered vehicle template and repaints its body panels (matched by the stable
-    /// part names build_secondary_meshes.py exports for the raider mesh: any descendant whose
-    /// name contains "chassis" or "cabin" -- armor plates, the ram bar, and wheels are
-    /// deliberately left untouched so they don't all turn the same paint color as the body).
-    @discardableResult
-    public func spawnVehicle(id: String, paintColor: (r: Double, g: Double, b: Double), at position: DHVector3) -> Entity? {
-        guard let template = vehicleTemplate else { return nil }
-        let instance = template.clone(recursive: true)
-        instance.name = id
-        instance.position = [Float(position.x), Float(position.y), Float(position.z)]
-        applyVehiclePaint(to: instance, paintColor: paintColor)
-        vehicleEntities[id]?.removeFromParent()
-        vehicleEntities[id] = instance
-        anchors[id] = instance
-        root.addChild(instance)
-        return instance
-    }
-
-    public func removeVehicle(id: String) {
-        vehicleEntities[id]?.removeFromParent()
-        vehicleEntities.removeValue(forKey: id)
-        anchors.removeValue(forKey: id)
-    }
-
-    private func applyVehiclePaint(to entity: Entity, paintColor: (r: Double, g: Double, b: Double)) {
-        let paintMaterial = SimpleMaterial(color: SimpleMaterial.Color(red: CGFloat(paintColor.r), green: CGFloat(paintColor.g), blue: CGFloat(paintColor.b), alpha: 1), isMetallic: true)
-        for descendant in allDescendants(of: entity) {
-            guard let model = descendant as? ModelEntity, model.model != nil else { continue }
-            if descendant.name.contains("chassis") || descendant.name.contains("cabin") {
-                model.model?.materials = [paintMaterial]
-            }
-        }
-    }
-
-    /// Samples the player.interact animation clip's spine track at `time` seconds and rotates
-    /// the player-avatar entity accordingly -- the repair gesture. Previously
-    /// DHRev10AnimationClipLibrary could decode/sample the clip's JSON but nothing applied it to
-    /// a live entity; a no-op (both the clip and the entity are looked up defensively) when
-    /// either isn't present yet, e.g. before build() runs.
-    public func stepPlayerRepairAnimation(time: Double) {
-        guard let clip = animationLibrary.clip(forBindingID: "player.interact"),
-              let player = anchors["player.avatar"],
-              let spineDegrees = clip.sample(bone: "spine", axis: "x", at: time) else { return }
-        player.orientation = simd_quatf(angle: Float(spineDegrees) * .pi / 180, axis: [1, 0, 0])
-    }
-
-    /// Samples the kingmaker.start clip's chassis-shudder track at `time` seconds and offsets the
-    /// chassis entity's height accordingly -- the engine-crank shudder. Same "decode existed,
-    /// nothing applied it" gap as stepPlayerRepairAnimation above.
-    public func stepKingmakerStartAnimation(time: Double) {
-        guard let clip = animationLibrary.clip(forBindingID: "kingmaker.start"),
-              let chassis = anchors["kingmaker.chassis"],
-              let shudderZ = clip.sample(bone: "chassis", axis: "z", at: time) else { return }
-        chassis.position = [0, 0.35 + Float(shudderZ), 0]
-    }
-
-    /// Applies BodyDamageState's per-zone deformation weights to the chassis entity.
-    ///
-    /// Kingmaker_XR13.usdz (Tools/BlenderAssetGen/build_kingmaker.py) now genuinely ships 10
-    /// named UsdSkelBlendShape targets, one per CollisionZone (deform_frontLeft, deform_roof,
-    /// etc.), matching DHRev10DeformationBlendShapes.targetName(for:) exactly -- verified via USD
-    /// stage introspection that each has real, nonzero per-vertex offsets, not placeholder empty
-    /// targets. What's still missing is the runtime half: as of this SDK, RealityKit's public
-    /// Swift API has no BlendShape/MorphTarget weight-setting type at all (confirmed by grepping
-    /// RealityKit.swiftinterface directly, not by failing to find the right name), so there is no
-    /// public way to drive an imported USD blend shape's weight at runtime. Until Apple exposes
-    /// that, this stays a scale-down proxy on the whole chassis -- the point is that real weight
-    /// data drives *something* live on the entity graph, and the asset itself is production-ready
-    /// for whenever the API exists (or for authoring tools like Reality Composer Pro that can
-    /// already read/bake these targets ahead of time).
-    public func applyDeformation(_ damage: BodyDamageState) {
-        guard let chassis = anchors["kingmaker.chassis"] else { return }
-        let severity = Float(DHRev10DeformationBlendShapes.weights(for: damage).values.max() ?? 0)
-        let scale = 1 - severity * 0.06
-        chassis.scale = [scale, scale, scale]
-    }
-
-    /// Looks up a queued combat-FX cue's real emitter config (see DHRev10CombatFXLibrary) and
-    /// attaches a matching particle emitter to the encounter anchor, so
-    /// DHVehicleEncounterRuntime.activeFXCues actually renders instead of only being consumable
-    /// data. `encounterAnchorID` should match the encounter's stableEntityID (e.g.
-    /// "encounter.north-road"); no-op if that anchor or the cue's config isn't present.
-    @available(iOS 18.0, macOS 15.0, *)
-    public func spawnCombatFX(cue: String, encounterAnchorID: String) {
-        guard let anchor = anchors[encounterAnchorID],
-              let config = combatFXLibrary.emitterConfig(named: cue) else { return }
-        var emitter = ParticleEmitterComponent()
-        emitter.mainEmitter.birthRate = Float(config.birthRate)
-        emitter.mainEmitter.lifeSpan = config.lifespan
-        emitter.speed = Float(config.speed)
-        emitter.isEmitting = true
-        let fxEntity = Entity()
-        fxEntity.name = "fx.\(cue)"
-        fxEntity.components.set(emitter)
-        anchor.addChild(fxEntity)
     }
 
     private func diagnosticProps(for kind: DHBlackridgeLocationKind) -> [String] {
@@ -516,61 +370,6 @@ public final class DHRev10RealityKitScene {
             current = node.parent
         }
         return false
-    }
-
-    /// Adds real image-based (environment) lighting on top of the existing single DirectionalLight
-    /// -- previously there was no environment/IBL lighting at all, so every material rendered
-    /// against a flat, directionless background (Docs/REV10_PRODUCTION_GAP_AUDIT.md). An earlier
-    /// attempt at this used a bright emissive "studio panel" reflector in the *Blender preview
-    /// renderer* (Tools/BlenderAssetGen/build_kingmaker.py) and blew the render out to near-white
-    /// at any workable strength -- that was a different rendering system (Blender EEVEE, offline
-    /// stills) with no exposure control comparable to this one, so the failure doesn't transfer
-    /// here, but the same caution applies: this deliberately starts conservative (a dim,
-    /// desaturated overcast-wasteland sky gradient, negative intensityExponent) rather than a
-    /// bright reflective environment, and is easy to brighten later once verified on-device.
-    /// Uses RealityFoundation.ImageBasedLightComponent/ImageBasedLightReceiverComponent
-    /// (available at exactly this file's iOS 18/macOS 15 deployment target) rather than the
-    /// legacy ARView.Environment.ImageBasedLight, which is UIKit/AppKit-view-scoped and doesn't
-    /// apply to a bare Entity-graph scene like this one.
-    private func buildEnvironmentLighting() {
-        guard let skyImage = Self.makeWastelandSkyImage(),
-              let environment = try? EnvironmentResource(equirectangular: skyImage, withName: "wasteland_sky") else { return }
-        let lightSource = Entity()
-        lightSource.name = "lighting.ibl"
-        var ibl = ImageBasedLightComponent(source: .single(environment), intensityExponent: -0.4)
-        ibl.inheritsRotation = true
-        lightSource.components.set(ibl)
-        root.addChild(lightSource)
-        anchors["lighting.ibl"] = lightSource
-        root.components.set(ImageBasedLightReceiverComponent(imageBasedLight: lightSource))
-    }
-
-    /// A small procedural equirectangular sky: desaturated overcast zenith fading to a dusty
-    /// amber horizon and a dark ground band -- generated in Swift (no new bundled asset needed)
-    /// so the environment map ships with the code, not a separate file to keep in sync.
-    private static func makeWastelandSkyImage(width: Int = 64, height: Int = 32) -> CGImage? {
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        guard let context = CGContext(
-            data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
-            space: colorSpace, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else { return nil }
-        let zenith = (r: 0.22, g: 0.21, b: 0.20)
-        let horizon = (r: 0.38, g: 0.29, b: 0.20)
-        let ground = (r: 0.09, g: 0.08, b: 0.07)
-        for y in 0..<height {
-            let t = Double(y) / Double(max(1, height - 1))
-            let color: (r: Double, g: Double, b: Double)
-            if t < 0.5 {
-                let localT = t / 0.5
-                color = (zenith.r + (horizon.r - zenith.r) * localT, zenith.g + (horizon.g - zenith.g) * localT, zenith.b + (horizon.b - zenith.b) * localT)
-            } else {
-                let localT = (t - 0.5) / 0.5
-                color = (horizon.r + (ground.r - horizon.r) * localT, horizon.g + (ground.g - horizon.g) * localT, horizon.b + (ground.b - horizon.b) * localT)
-            }
-            context.setFillColor(red: color.r, green: color.g, blue: color.b, alpha: 1)
-            context.fill(CGRect(x: 0, y: y, width: width, height: 1))
-        }
-        return context.makeImage()
     }
 
     private func buildGarageShell() {
