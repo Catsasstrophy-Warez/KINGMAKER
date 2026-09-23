@@ -1,5 +1,9 @@
 # Roadmap 5–30 execution status
 
+This is a dated execution snapshot; it intentionally retains the test count
+recorded at the time it was written. For current status, see
+`Docs/CURRENT_STATUS.md`.
+
 The steps below are the concrete implementation pass after the initial
 roadmap. “Verified” means it has a repository test, a successful build, or a
 runtime check; “external gate” means it requires authored production content,
@@ -23,7 +27,8 @@ interior have all moved from contract-only to built and tested; authored
 (not procedural) terrain, final production art, and physical-device
 validation remain external production gates.
 
-Current verification: 177 SwiftPM tests pass, the iOS Simulator target builds
-successfully, and the USDZ contract validator passes. Simulator launch and
-interactive UI validation remain blocked in this environment while the
-CoreSimulator service is unavailable.
+Current verification: 258 SwiftPM tests pass, including the end-to-end garage-to-Paradise route, start gating, world-space spawn anchors, bundled navmesh, spatial interaction guards, motion-driven route reconciliation, encounter visibility, live player animation, authored-asset placement, empty-stream recovery, readiness-gated RealityKit updates. The iOS Simulator target builds successfully with isolated caches, separate iOS UI smoke and full beat-progression tests pass for the launched garage surface, and the USDZ contract validator passes
+including semantic-label checks for the Kingmaker/environment replacement
+assets. The app now installs and launches on an available iPhone 16 Pro
+simulator runtime; complete interactive UI validation, profiling, and
+physical-device validation remain open gates.
