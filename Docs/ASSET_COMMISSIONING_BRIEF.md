@@ -12,7 +12,7 @@ bottom), the same way `Docs/ROADMAP_1_20.md` tracks the rest of the project.
 Dead Highway is an iOS RealityKit game built on a fully procedural blockout: every mesh, texture,
 audio stem, animation clip, and particle effect currently in the repo is code-generated (Blender
 scripts + numpy-synthesized textures + synthesized audio), deliberately temporary. The simulation,
-save system, combat, economy, and UI are complete and tested (220 automated tests passing). What's
+save system, combat, economy, and UI are complete and tested (236 automated tests passing). What's
 missing is **final art and audio to replace the placeholders without touching any code** — every
 asset below already has a stable ID the engine resolves by name.
 
@@ -84,6 +84,21 @@ shared mannequin template and retints its skin/cloth sub-meshes per NPC — no u
 for v1. The caller (App layer) is responsible for registering the loaded template once
 (`registerNPCTemplate`) and resolving each NPC's appearance
 data before calling spawnNPC, since DHPresentation deliberately doesn't depend on DHGameplay.
+
+## Vehicle roster
+
+12 named vehicles exist as data (`DHProductionVehicleRoster.entries`) spanning 11 `VehicleClass`
+kinds (interceptor, buggy, pickup, tanker, semi, motorcycle, bus, sedan, atv, towTruck, wreck) —
+none of which has a distinct mesh yet; every roster vehicle still renders as the same generic
+`HostileVehicle_Raider.usdz` blockout, retinted. `DHProductionVehicleRoster.paintColor(for:)`
+gives each a deterministic, faction-flavored paint color (Highway Patrol dark blue, Motor Tribes
+rust-orange, Combine corporate grey-black, etc., unaffiliated vehicles a neutral rust-grey), and
+`Rev10RealityKitScene.spawnVehicle(id:paintColor:at:)`/`registerVehicleTemplate(_:)` clone and
+repaint that shared template's chassis/cabin panels the same way spawnNPC retints the mannequin
+(armor plates, the ram bar, and wheels are deliberately left unpainted). Real per-kind meshes can
+replace the template later with no call-site changes. No placement-offset equivalent exists yet
+for vehicles (unlike `localPlacementOffset` for NPCs) — worth adding if/when vehicles need to
+scatter around a shared location the way NPCs do.
 
 ## Audio
 

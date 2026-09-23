@@ -40,6 +40,37 @@ import Testing
     #expect(coordinator.spawnedVehicleIDs.contains("veh.patrol-cruiser-7"))
 }
 
+@Test func everyRosterVehicleHasAPaintColorWithValidComponents() {
+    for entry in DHProductionVehicleRoster.entries {
+        let color = DHProductionVehicleRoster.paintColor(for: entry)
+        #expect(color.r >= 0 && color.r <= 1)
+        #expect(color.g >= 0 && color.g <= 1)
+        #expect(color.b >= 0 && color.b <= 1)
+    }
+}
+
+@Test func vehiclePaintColorIsDeterministicAcrossCalls() {
+    let entry = DHProductionVehicleRoster.entries[0]
+    let first = DHProductionVehicleRoster.paintColor(for: entry)
+    let second = DHProductionVehicleRoster.paintColor(for: entry)
+    #expect(first == second)
+}
+
+@Test func vehicleRosterHasGenuinePaintColorVariety() {
+    let colors = DHProductionVehicleRoster.entries.map { "\(DHProductionVehicleRoster.paintColor(for: $0))" }
+    #expect(Set(colors).count > 1)
+}
+
+@Test func factionOwnedVehiclesDoNotAllShareTheSamePaintColor() {
+    let byFaction = Dictionary(grouping: DHProductionVehicleRoster.entries, by: \.faction)
+    var foundAVariedFaction = false
+    for (_, entries) in byFaction where entries.count > 1 {
+        let colors = Set(entries.map { "\(DHProductionVehicleRoster.paintColor(for: $0))" })
+        if colors.count > 1 { foundAVariedFaction = true }
+    }
+    #expect(foundAVariedFaction, "every faction with multiple vehicles rendered them all identically")
+}
+
 @Test func everyRosterNPCHasABrainWithAFullDaySchedule() throws {
     let brains = DHProductionNPCRoster.makeBrains()
     #expect(brains.count == DHProductionNPCRoster.entries.count)

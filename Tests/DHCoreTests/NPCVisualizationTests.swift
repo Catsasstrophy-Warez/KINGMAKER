@@ -13,6 +13,7 @@ private func components(_ material: SimpleMaterial) -> [CGFloat] {
 }
 
 @available(iOS 18.0, macOS 15.0, *)
+@MainActor
 private func makeMannequinTemplate() -> Entity {
     // Mirrors build_character_rig.py's part-name convention (the real bundled asset uses the
     // same names), without needing to load the actual USDZ in a headless test.

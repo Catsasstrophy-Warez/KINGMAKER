@@ -18,6 +18,8 @@ public final class DHRev10RealityKitScene {
     private var activeInteractionID: String?
     private var npcTemplate: Entity?
     private var npcEntities: [String: Entity] = [:]
+    private var vehicleTemplate: Entity?
+    private var vehicleEntities: [String: Entity] = [:]
     public private(set) var loadedAssetIDs: Set<String> = []
     public private(set) var missingAssetIDs: Set<String> = []
     private let animationLibrary = DHRev10AnimationClipLibrary()
@@ -47,6 +49,8 @@ public final class DHRev10RealityKitScene {
         ambientFXEntities.removeAll()
         npcTemplate = nil
         npcEntities.removeAll()
+        vehicleTemplate = nil
+        vehicleEntities.removeAll()
         interactionHighlight = nil
         activeInteractionID = nil
         let camera = PerspectiveCamera()
@@ -92,6 +96,13 @@ public final class DHRev10RealityKitScene {
         player.position = [0, 0.6, 3]
         root.addChild(player)
         anchors["player.avatar"] = player
+        registerSpawnAnchor("spawn.garage.player", position: [0, 0.6, 3])
+        registerSpawnAnchor("spawn.garage.vehicle", position: [0, 0.35, 0])
+        if let paradiseChunk = anchors["chunk.paradise"] {
+            let paradiseOrigin = paradiseChunk.position(relativeTo: root)
+            registerSpawnAnchor("spawn.paradise.player", position: paradiseOrigin + [0, 0.6, 1.5])
+            registerSpawnAnchor("spawn.paradise.vehicleExit", position: paradiseOrigin + [0, 0.35, -2.5])
+        }
         for road in county.roads {
             let roadEntity = marker(name: "road.\(road.id)", size: 4.0, height: 0.05, color: .darkGray)
             roadEntity.scale = [1.8, 1, 0.35]
@@ -150,6 +161,9 @@ public final class DHRev10RealityKitScene {
     }
 
     public func entity(for stableID: String) -> Entity? { anchors[stableID] }
+    public func spawnPosition(for stableID: String) -> SIMD3<Float>? {
+        anchors[stableID]?.position(relativeTo: root)
+    }
     public func replaceKingmaker(with entity: Entity) {
         installKingmaker(entity)
     }
@@ -294,6 +308,14 @@ public final class DHRev10RealityKitScene {
     }
     public func attach(_ entity: Entity, stableID: String) { anchors[stableID] = entity; root.addChild(entity) }
 
+    private func registerSpawnAnchor(_ stableID: String, position: SIMD3<Float>) {
+        let anchor = Entity()
+        anchor.name = stableID
+        anchor.position = position
+        anchors[stableID] = anchor
+        root.addChild(anchor)
+    }
+
     /// Registers the loaded mannequin entity (player.walk's resolved asset) as the template every
     /// spawnNPC(...) call clones. Previously no NPC -- named or otherwise -- had any visual
     /// representation in this scene at all; DHProductionNPCRoster.appearance(for:) already
@@ -352,6 +374,52 @@ public final class DHRev10RealityKitScene {
             result.append(contentsOf: allDescendants(of: child))
         }
         return result
+    }
+
+    /// Registers a loaded vehicle entity (currently the hostile.vehicle/HostileVehicle_Raider
+    /// asset -- the only generic vehicle blockout that exists) as the template every
+    /// spawnVehicle(...) clones. No mesh exists yet for the roster's actual VehicleClass variety
+    /// (interceptor/buggy/pickup/tanker/semi/motorcycle/bus/sedan/atv/towTruck/wreck are all the
+    /// same generic shape today); this makes the shared silhouette individually paintable per
+    /// vehicle rather than pretending each roster entry has a distinct model, the same honest
+    /// "one shared mesh, real per-instance material variation" posture spawnNPC already uses for
+    /// the mannequin. Swap the template for real per-kind meshes later with no call-site changes.
+    public func registerVehicleTemplate(_ entity: Entity) {
+        vehicleTemplate = entity
+    }
+
+    /// Clones the registered vehicle template and repaints its body panels (matched by the stable
+    /// part names build_secondary_meshes.py exports for the raider mesh: any descendant whose
+    /// name contains "chassis" or "cabin" -- armor plates, the ram bar, and wheels are
+    /// deliberately left untouched so they don't all turn the same paint color as the body).
+    @discardableResult
+    public func spawnVehicle(id: String, paintColor: (r: Double, g: Double, b: Double), at position: DHVector3) -> Entity? {
+        guard let template = vehicleTemplate else { return nil }
+        let instance = template.clone(recursive: true)
+        instance.name = id
+        instance.position = [Float(position.x), Float(position.y), Float(position.z)]
+        applyVehiclePaint(to: instance, paintColor: paintColor)
+        vehicleEntities[id]?.removeFromParent()
+        vehicleEntities[id] = instance
+        anchors[id] = instance
+        root.addChild(instance)
+        return instance
+    }
+
+    public func removeVehicle(id: String) {
+        vehicleEntities[id]?.removeFromParent()
+        vehicleEntities.removeValue(forKey: id)
+        anchors.removeValue(forKey: id)
+    }
+
+    private func applyVehiclePaint(to entity: Entity, paintColor: (r: Double, g: Double, b: Double)) {
+        let paintMaterial = SimpleMaterial(color: SimpleMaterial.Color(red: CGFloat(paintColor.r), green: CGFloat(paintColor.g), blue: CGFloat(paintColor.b), alpha: 1), isMetallic: true)
+        for descendant in allDescendants(of: entity) {
+            guard let model = descendant as? ModelEntity, model.model != nil else { continue }
+            if descendant.name.contains("chassis") || descendant.name.contains("cabin") {
+                model.model?.materials = [paintMaterial]
+            }
+        }
     }
 
     /// Samples the player.interact animation clip's spine track at `time` seconds and rotates

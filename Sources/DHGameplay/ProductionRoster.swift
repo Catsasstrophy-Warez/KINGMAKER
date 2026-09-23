@@ -224,6 +224,35 @@ public enum DHProductionVehicleRoster {
         (id: "veh.wreck-derelict-honda", name: "Derelict Wreck", kind: .wreck, fuel: .gasoline, liters: 0, faction: nil),
     ]
 
+    /// A deterministic paint color for a roster vehicle, faction-flavored the same way
+    /// DHProductionNPCRoster.appearance(for:)'s cloth color is occupation-flavored (a Highway
+    /// Patrol cruiser isn't painted like a Motor Tribes buggy), with per-individual jitter so two
+    /// vehicles owned by the same faction aren't identical. Meant to tint a shared placeholder
+    /// vehicle mesh's body panels the same way appearance() tints the shared mannequin's
+    /// skin/cloth -- no unique mesh per vehicle kind exists yet (interceptor/buggy/pickup/tanker/
+    /// semi/motorcycle/bus/sedan/atv/towTruck/wreck are all still the same generic blockout).
+    public static func paintColor(for entry: (id: String, name: String, kind: VehicleClass, fuel: FuelKind, liters: Double, faction: Faction?)) -> (r: Double, g: Double, b: Double) {
+        let factionBase: (Double, Double, Double)
+        switch entry.faction {
+        case .highwayPatrol: factionBase = (0.08, 0.12, 0.28)      // dark patrol blue
+        case .motorTribes: factionBase = (0.35, 0.16, 0.06)        // rust/scrap orange-brown
+        case .homesteads: factionBase = (0.22, 0.28, 0.14)         // earthy homestead green
+        case .refineryHouses: factionBase = (0.55, 0.42, 0.05)     // industrial hazard yellow
+        case .combine: factionBase = (0.14, 0.14, 0.16)            // corporate grey-black
+        case .railUnion: factionBase = (0.30, 0.08, 0.08)          // rail-union dark red
+        case .restorationists: factionBase = (0.62, 0.62, 0.60)    // clean restored silver
+        case .childrenOfBurn: factionBase = (0.06, 0.05, 0.05)     // charred black
+        case nil: factionBase = (0.24, 0.22, 0.20)                 // unaffiliated neutral rust-grey
+        }
+        let jitterHash = DHProductionNPCRoster.unitHash(entry.id + ".paint")
+        let jitter = (jitterHash - 0.5) * 0.14
+        return (
+            min(1, max(0, factionBase.0 + jitter)),
+            min(1, max(0, factionBase.1 + jitter)),
+            min(1, max(0, factionBase.2 + jitter))
+        )
+    }
+
     public static func makeFleet() -> FleetState {
         var fleet = FleetState()
         for entry in entries {
