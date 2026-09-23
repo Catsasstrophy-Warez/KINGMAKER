@@ -56,11 +56,26 @@ public struct DHVehicleEncounterRuntime: Codable, Equatable, Sendable {
         }
     }
 
-    public mutating func fire(rounds: Int = 2, damage: Double = 20) {
-        DHPlayableCombatResolver().apply(.fire(rounds: rounds, damage: damage), actor: &player, target: &hostile)
+    /// `rolls`: forwarded to DHPlayableCombatResolver.apply -- nil (the default) preserves the
+    /// original every-round-hits behavior exactly, so every existing caller/test is unaffected.
+    /// Pass real per-round rolls (a seeded RNG for reproducible tests, Double.random for live
+    /// gameplay) to get genuine hit/miss instead of every fired round automatically connecting;
+    /// see DHPlayableCombatResolver's doc comment for why this stays opt-in.
+    @discardableResult
+    public mutating func fire(rounds: Int = 2, damage: Double = 20, rolls: [Double]? = nil) -> DHCombatOutcome {
+        let outcome = DHPlayableCombatResolver().apply(.fire(rounds: rounds, damage: damage), actor: &player, target: &hostile, rolls: rolls)
         activeFXCues.append("MuzzleFlash")
-        if hostile.health > 0 { activeFXCues.append("SparkImpact") }
+        if outcome.anyHit { activeFXCues.append("SparkImpact") }
         if hostile.health <= 0 { resolve() }
+        return outcome
+    }
+
+    /// Wraps DHCombatAction.reload -- the resolver already modeled reload, but nothing on the
+    /// vehicle-encounter path exposed a way to call it, so ammo (capped implicitly by never
+    /// being replenished) could only ever go down mid-encounter.
+    public mutating func reload(rounds: Int) {
+        var dummyTarget = hostile
+        DHPlayableCombatResolver().apply(.reload(rounds: rounds), actor: &player, target: &dummyTarget)
     }
 
     public mutating func resolve() {

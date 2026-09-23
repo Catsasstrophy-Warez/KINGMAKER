@@ -64,7 +64,42 @@ import Testing
         payload: DeadHighwaySnapshot(clock: SimulationClock(), playerID: EntityID(), heroVehicleID: EntityID())
     )
     let data = try! JSONEncoder().encode(futureEnvelope)
-    #expect(throws: SaveMigrationError.self) { try SaveMigrator.decode(data) }
+    #expect(throws: SaveMigrationError.unsupportedVersion(SaveMigrator.currentVersion + 1)) { try SaveMigrator.decode(data) }
+}
+
+@Test func saveMigratorRejectsAnEnvelopeOlderThanMinimumSupportedVersion() {
+    let ancientEnvelope = SaveEnvelope(
+        schemaVersion: SaveMigrator.minimumSupportedVersion - 1,
+        payload: DeadHighwaySnapshot(clock: SimulationClock(), playerID: EntityID(), heroVehicleID: EntityID())
+    )
+    let data = try! JSONEncoder().encode(ancientEnvelope)
+    #expect(throws: SaveMigrationError.versionTooOld(SaveMigrator.minimumSupportedVersion - 1)) { try SaveMigrator.decode(data) }
+}
+
+@Test func saveMigratorReportsGenuinelyMalformedDataAsCorruptNotAVersionProblem() {
+    let garbage = Data("not json at all { [ }".utf8)
+    #expect {
+        try SaveMigrator.decode(garbage)
+    } throws: { error in
+        guard case .corruptData = error as? SaveMigrationError else { return false }
+        return true
+    }
+}
+
+@Test func saveMigratorMigrateIsIdentityWhenNoStepsAreRegisteredForTheGap() {
+    // Nothing has actually changed shape between version 1 and currentVersion in this codebase
+    // yet, so migrating from 1 up to currentVersion should be a pure identity transform.
+    let snapshot = DeadHighwaySnapshot(clock: SimulationClock(), playerID: EntityID(), heroVehicleID: EntityID())
+    let migrated = SaveMigrator.migrate(snapshot, fromVersion: SaveMigrator.minimumSupportedVersion)
+    #expect(migrated == snapshot)
+}
+
+@Test func legacyBareSnapshotIsTreatedAsMinimumSupportedVersionNotRejected() throws {
+    // A pre-SaveEnvelope save has no version at all; decode() should treat it as
+    // minimumSupportedVersion and successfully migrate it forward, not reject it as too old.
+    let bareSnapshot = DeadHighwaySnapshot(clock: SimulationClock(), playerID: EntityID(), heroVehicleID: EntityID())
+    let data = try JSONEncoder().encode(bareSnapshot)
+    #expect(throws: Never.self) { try SaveMigrator.decode(data) }
 }
 
 @Test func deadHighwayRuntimeEncodedSaveRoundTripsThroughDecodeSave() async throws {
