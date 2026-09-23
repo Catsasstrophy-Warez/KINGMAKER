@@ -71,6 +71,47 @@ import Testing
     #expect(foundAVariedFaction, "every faction with multiple vehicles rendered them all identically")
 }
 
+@Test func vehiclePlacementOffsetIsDeterministicAcrossCalls() {
+    let entry = DHProductionVehicleRoster.entries[0]
+    let first = DHProductionVehicleRoster.localPlacementOffset(for: entry)
+    let second = DHProductionVehicleRoster.localPlacementOffset(for: entry)
+    #expect(first.x == second.x)
+    #expect(first.z == second.z)
+}
+
+@Test func vehiclePlacementOffsetsWithinAFactionAreSpreadNotStacked() {
+    let byFaction = Dictionary(grouping: DHProductionVehicleRoster.entries, by: \.faction)
+    var foundAFactionWithSpread = false
+    for (_, entries) in byFaction where entries.count > 1 {
+        let offsets = entries.map(DHProductionVehicleRoster.localPlacementOffset(for:))
+        for i in 0..<offsets.count {
+            for j in (i + 1)..<offsets.count {
+                let dx = offsets[i].x - offsets[j].x
+                let dz = offsets[i].z - offsets[j].z
+                #expect((dx * dx + dz * dz) > 0.01, "two vehicles in the same faction landed on top of each other")
+            }
+        }
+        foundAFactionWithSpread = true
+    }
+    #expect(foundAFactionWithSpread, "no faction actually had multiple vehicles to test spread against")
+}
+
+@Test func vehiclePlacementOffsetsStayWithinAReasonableRadius() {
+    for entry in DHProductionVehicleRoster.entries {
+        let offset = DHProductionVehicleRoster.localPlacementOffset(for: entry)
+        let distance = (offset.x * offset.x + offset.z * offset.z).squareRoot()
+        #expect(distance < 5.0, "\(entry.id) placed unreasonably far from its faction's parking spot")
+    }
+}
+
+@Test func unaffiliatedVehiclesStillGetSpreadPlacement() {
+    let unaffiliated = DHProductionVehicleRoster.entries.filter { $0.faction == nil }
+    #expect(unaffiliated.count > 1, "expected multiple unaffiliated vehicles to test grouping against")
+    let offsets = unaffiliated.map(DHProductionVehicleRoster.localPlacementOffset(for:))
+    let distinct = Set(offsets.map { "\($0.x),\($0.z)" })
+    #expect(distinct.count == offsets.count, "unaffiliated vehicles (nil faction group) overlapped")
+}
+
 @Test func everyRosterNPCHasABrainWithAFullDaySchedule() throws {
     let brains = DHProductionNPCRoster.makeBrains()
     #expect(brains.count == DHProductionNPCRoster.entries.count)

@@ -253,6 +253,25 @@ public enum DHProductionVehicleRoster {
         )
     }
 
+    /// A deterministic local (x, z) offset so roster vehicles don't stack when spawned near each
+    /// other -- the same gap `DHProductionNPCRoster.localPlacementOffset(for:)` closed for NPCs.
+    /// Vehicles have no home site field to group by (unlike NPCs), so this groups by faction
+    /// instead (unaffiliated vehicles share the `nil` group): faction-owned vehicles cluster
+    /// together the way a patrol motor pool or a homestead's fleet actually would, spread evenly
+    /// around a loose circle with per-individual angle/radius jitter. Like the NPC version, this
+    /// returns a *local* offset, not an absolute world position -- the caller adds it to wherever
+    /// that faction's vehicles are actually parked.
+    public static func localPlacementOffset(for entry: (id: String, name: String, kind: VehicleClass, fuel: FuelKind, liters: Double, faction: Faction?)) -> (x: Double, z: Double) {
+        let factionMates = entries.filter { $0.faction == entry.faction }
+        let index = factionMates.firstIndex { $0.id == entry.id } ?? 0
+        let factionMateCount = max(1, factionMates.count)
+        let baseAngle = (2 * Double.pi * Double(index)) / Double(factionMateCount)
+        let angleJitter = (DHProductionNPCRoster.unitHash(entry.id + ".placement.angle") - 0.5) * 0.6
+        let radius = 2.2 + DHProductionNPCRoster.unitHash(entry.id + ".placement.radius") * 1.8
+        let angle = baseAngle + angleJitter
+        return (x: radius * cos(angle), z: radius * sin(angle))
+    }
+
     public static func makeFleet() -> FleetState {
         var fleet = FleetState()
         for entry in entries {
