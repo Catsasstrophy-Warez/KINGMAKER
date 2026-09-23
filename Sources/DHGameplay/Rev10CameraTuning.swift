@@ -71,11 +71,17 @@ public enum DHRev10CameraTuning {
         .dialogue: .init(fieldOfViewDegrees: 40, durationSeconds: 0.5, easing: .easeInOut, distance: 2.2),
     ]
 
+    /// Fallback used only if inspectionTransitions is ever edited to drop a case -- a literal
+    /// value rather than re-indexing the dictionary with a force-unwrap, so a future edit that
+    /// forgets a case degrades gracefully instead of crashing.
+    private static let fallbackInspectionTransition = DHRev10CameraTransition(fieldOfViewDegrees: 60, durationSeconds: 0.6, easing: .easeInOut, distance: 18)
+    private static let fallbackPlayerModeTransition = DHRev10CameraTransition(fieldOfViewDegrees: 65, durationSeconds: 0.5, easing: .easeInOut, distance: 6)
+
     public static func transition(for mode: DHRev10InspectionMode) -> DHRev10CameraTransition {
-        inspectionTransitions[mode] ?? inspectionTransitions[.world]!
+        inspectionTransitions[mode] ?? fallbackInspectionTransition
     }
 
     public static func transition(for mode: DHRev10PlayerMode) -> DHRev10CameraTransition {
-        playerModeTransitions[mode] ?? playerModeTransitions[.onFoot]!
+        playerModeTransitions[mode] ?? fallbackPlayerModeTransition
     }
 }
