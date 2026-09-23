@@ -37,6 +37,19 @@ import Testing
     #expect(a.nextEntityID() == b.nextEntityID())
 }
 
+@Test func successiveEntityIDsFromTheSameGeneratorAreDistinct() {
+    var generator = SeededGenerator(seed: 99)
+    var seen: Set<EntityID> = []
+    for _ in 0..<50 { seen.insert(generator.nextEntityID()) }
+    #expect(seen.count == 50, "expected 50 distinct IDs, got \(seen.count) (collision in nextEntityID)")
+}
+
+@Test func entityIDsFromDifferentSeedsAreDistinct() {
+    var a = SeededGenerator(seed: 1)
+    var b = SeededGenerator(seed: 2)
+    #expect(a.nextEntityID() != b.nextEntityID())
+}
+
 @Test func deadHighwayRuntimeRecordsEventsWithAdvancingTick() async {
     let snapshot = DeadHighwaySnapshot(clock: SimulationClock(), playerID: EntityID(), heroVehicleID: EntityID())
     let runtime = DeadHighwayRuntime(snapshot: snapshot)
